@@ -12,7 +12,7 @@ The repository contains:
 
 ## Required Workflow
 
-1. Read `README.md` and `docs/architecture.md` before changing architecture, rules, or implementation structure.
+1. Read `README.md`, `docs/architecture.md`, and `docs/phase-checklist.md` before changing architecture, rules, or implementation structure.
 2. Check the target area before editing:
    - Root and `docs/`: project documentation and governance.
    - `.codex/`, `.claude/`, `.agents/`, `.hermes/`: agent configuration and local automation.
@@ -41,6 +41,7 @@ The repository contains:
 - Documentation changes: review links and headings manually.
 - Qdrant demo changes: run tests from `qdrant-multi-node-cluster/` with `make test` or `python -m unittest discover -s tests`.
 - Agent configuration changes: verify that referenced files exist and local-only files remain ignored.
+- Phase changes: use `docs/phase-checklist.md` as the completion checklist and do not mark a phase complete without the listed tests or equivalent evidence.
 
 ## Writing Standards
 

@@ -50,7 +50,7 @@ flowchart TD
     API --> Audit[(Audit logs)]
 ```
 
-The source-of-truth architecture document is [docs/architecture.md](docs/architecture.md). The roadmap is [docs/action.md](docs/action.md).
+The source-of-truth architecture document is [docs/architecture.md](docs/architecture.md). The roadmap is [docs/action.md](docs/action.md). Agent phase handoff and completion checks are tracked in [docs/phase-checklist.md](docs/phase-checklist.md).
 
 ## Features
 
