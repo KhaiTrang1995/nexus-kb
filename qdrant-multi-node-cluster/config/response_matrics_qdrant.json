@@ -1,0 +1,212 @@
+# HELP app_info information about qdrant server
+# TYPE app_info gauge
+app_info{name="qdrant",version="1.16.3"} 1
+# HELP app_status_recovery_mode features enabled in qdrant server
+# TYPE app_status_recovery_mode gauge
+app_status_recovery_mode 0
+# HELP collections_total number of collections
+# TYPE collections_total gauge
+collections_total 3
+# HELP collections_vector_total total number of vectors in all collections
+# TYPE collections_vector_total gauge
+collections_vector_total 24731
+# HELP collection_vectors amount of vectors grouped by vector name
+# TYPE collection_vectors gauge
+collection_vectors{collection="sharding_collection",vector=""} 486
+collection_vectors{collection="Midjourney",vector=""} 5417
+collection_vectors{collection="Qdrant Docs",vector=""} 18828
+# HELP collection_indexed_only_excluded_points amount of points excluded in indexed_only requests
+# TYPE collection_indexed_only_excluded_points gauge
+collection_indexed_only_excluded_points{id="sharding_collection",vector=""} 0
+collection_indexed_only_excluded_points{id="Midjourney",vector=""} 0
+collection_indexed_only_excluded_points{id="Qdrant Docs",vector=""} 0
+# HELP collection_active_replicas_min minimum number of active replicas across all shards
+# TYPE collection_active_replicas_min gauge
+collection_active_replicas_min 1
+# HELP collection_active_replicas_max maximum number of active replicas across all shards
+# TYPE collection_active_replicas_max gauge
+collection_active_replicas_max 1
+# HELP collection_running_optimizations number of currently running optimization tasks per collection
+# TYPE collection_running_optimizations gauge
+collection_running_optimizations{id="sharding_collection"} 0
+collection_running_optimizations{id="Midjourney"} 0
+collection_running_optimizations{id="Qdrant Docs"} 0
+# HELP collection_points approximate amount of points per collection
+# TYPE collection_points gauge
+collection_points{id="sharding_collection"} 486
+collection_points{id="Midjourney"} 5417
+collection_points{id="Qdrant Docs"} 18828
+# HELP collection_dead_replicas total amount of shard replicas in non-active state
+# TYPE collection_dead_replicas gauge
+collection_dead_replicas 0
+# HELP snapshot_creation_running amount of snapshot creations that are currently running
+# TYPE snapshot_creation_running gauge
+snapshot_creation_running{id="sharding_collection"} 0
+snapshot_creation_running{id="Qdrant Docs"} 0
+snapshot_creation_running{id="Midjourney"} 0
+# HELP snapshot_recovery_running amount of snapshot recovery operations currently running
+# TYPE snapshot_recovery_running gauge
+snapshot_recovery_running{id="sharding_collection"} 0
+snapshot_recovery_running{id="Qdrant Docs"} 0
+snapshot_recovery_running{id="Midjourney"} 0
+# HELP snapshot_created_total total amount of snapshots created
+# TYPE snapshot_created_total counter
+snapshot_created_total{id="sharding_collection"} 0
+snapshot_created_total{id="Qdrant Docs"} 0
+snapshot_created_total{id="Midjourney"} 0
+# HELP collection_shard_transfer_incoming incoming shard transfers currently running
+# TYPE collection_shard_transfer_incoming gauge
+collection_shard_transfer_incoming{id="sharding_collection"} 0
+collection_shard_transfer_incoming{id="Midjourney"} 0
+collection_shard_transfer_incoming{id="Qdrant Docs"} 0
+# HELP collection_shard_transfer_outgoing outgoing shard transfers currently running
+# TYPE collection_shard_transfer_outgoing gauge
+collection_shard_transfer_outgoing{id="sharding_collection"} 0
+collection_shard_transfer_outgoing{id="Midjourney"} 0
+collection_shard_transfer_outgoing{id="Qdrant Docs"} 0
+# HELP cluster_enabled is cluster support enabled
+# TYPE cluster_enabled gauge
+cluster_enabled 1
+# HELP cluster_peers_total total number of cluster peers
+# TYPE cluster_peers_total gauge
+cluster_peers_total 3
+# HELP cluster_term current cluster term
+# TYPE cluster_term counter
+cluster_term 4
+# HELP cluster_commit index of last committed (finalized) operation cluster peer is aware of
+# TYPE cluster_commit counter
+cluster_commit{peer_id="3889159058276502"} 30
+# HELP cluster_pending_operations_total total number of pending operations for cluster peer
+# TYPE cluster_pending_operations_total gauge
+cluster_pending_operations_total 0
+# HELP cluster_voter is cluster peer a voter or learner
+# TYPE cluster_voter gauge
+cluster_voter 1
+# HELP cluster_last_update_timestamp_seconds unix timestamp of last update
+# TYPE cluster_last_update_timestamp_seconds counter
+cluster_last_update_timestamp_seconds 1766741049
+# HELP cluster_working_state working state of the cluster
+# TYPE cluster_working_state gauge
+cluster_working_state{state="working"} 1
+cluster_working_state{state="stopped"} 0
+# HELP rest_responses_total total number of responses
+# TYPE rest_responses_total counter
+rest_responses_total{method="POST",endpoint="/collections/{name}/points/scroll",status="200"} 6
+rest_responses_total{method="POST",endpoint="/collections/{name}/points/query",status="200"} 3
+# HELP rest_responses_fail_total total number of failed responses
+# TYPE rest_responses_fail_total counter
+rest_responses_fail_total{method="POST",endpoint="/collections/{name}/points/scroll",status="200"} 0
+rest_responses_fail_total{method="POST",endpoint="/collections/{name}/points/query",status="200"} 0
+# HELP rest_responses_avg_duration_seconds average response duration
+# TYPE rest_responses_avg_duration_seconds gauge
+rest_responses_avg_duration_seconds{method="POST",endpoint="/collections/{name}/points/scroll",status="200"} 0.00569677783203125
+rest_responses_avg_duration_seconds{method="POST",endpoint="/collections/{name}/points/query",status="200"} 0.00457133349609375
+# HELP rest_responses_min_duration_seconds minimum response duration
+# TYPE rest_responses_min_duration_seconds gauge
+rest_responses_min_duration_seconds{method="POST",endpoint="/collections/{name}/points/scroll",status="200"} 0.001657
+rest_responses_min_duration_seconds{method="POST",endpoint="/collections/{name}/points/query",status="200"} 0.001843
+# HELP rest_responses_max_duration_seconds maximum response duration
+# TYPE rest_responses_max_duration_seconds gauge
+rest_responses_max_duration_seconds{method="POST",endpoint="/collections/{name}/points/scroll",status="200"} 0.008433
+rest_responses_max_duration_seconds{method="POST",endpoint="/collections/{name}/points/query",status="200"} 0.006411
+# HELP rest_responses_duration_seconds response duration histogram
+# TYPE rest_responses_duration_seconds histogram
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="0.001"} 0
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="0.005"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="0.01"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="0.02"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="0.05"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="0.1"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="0.5"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="1"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="5"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="10"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="50"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/scroll",status="200",le="+Inf"} 6
+rest_responses_duration_seconds_sum{method="POST",endpoint="/collections/{name}/points/scroll",status="200"} 0.027532
+rest_responses_duration_seconds_count{method="POST",endpoint="/collections/{name}/points/scroll",status="200"} 6
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="0.001"} 0
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="0.005"} 1
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="0.01"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="0.02"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="0.05"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="0.1"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="0.5"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="1"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="5"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="10"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="50"} 3
+rest_responses_duration_seconds_bucket{method="POST",endpoint="/collections/{name}/points/query",status="200",le="+Inf"} 3
+rest_responses_duration_seconds_sum{method="POST",endpoint="/collections/{name}/points/query",status="200"} 0.013714
+rest_responses_duration_seconds_count{method="POST",endpoint="/collections/{name}/points/query",status="200"} 3
+# HELP collection_hardware_metric_cpu CPU measurements of a collection
+# TYPE collection_hardware_metric_cpu counter
+collection_hardware_metric_cpu{id="Qdrant Docs"} 0
+collection_hardware_metric_cpu{id="sharding_collection"} 2979840
+collection_hardware_metric_cpu{id="Midjourney"} 1611776
+# HELP collection_hardware_metric_payload_io_read Total IO payload read metrics of a collection
+# TYPE collection_hardware_metric_payload_io_read counter
+collection_hardware_metric_payload_io_read{id="Qdrant Docs"} 2570
+collection_hardware_metric_payload_io_read{id="sharding_collection"} 5457
+collection_hardware_metric_payload_io_read{id="Midjourney"} 4837
+# HELP collection_hardware_metric_payload_index_io_read Total IO payload index read metrics of a collection
+# TYPE collection_hardware_metric_payload_index_io_read counter
+collection_hardware_metric_payload_index_io_read{id="Qdrant Docs"} 0
+collection_hardware_metric_payload_index_io_read{id="sharding_collection"} 0
+collection_hardware_metric_payload_index_io_read{id="Midjourney"} 0
+# HELP collection_hardware_metric_payload_index_io_write Total IO payload index write metrics of a collection
+# TYPE collection_hardware_metric_payload_index_io_write counter
+collection_hardware_metric_payload_index_io_write{id="Qdrant Docs"} 0
+collection_hardware_metric_payload_index_io_write{id="sharding_collection"} 0
+collection_hardware_metric_payload_index_io_write{id="Midjourney"} 0
+# HELP collection_hardware_metric_payload_io_write Total IO payload write metrics of a collection
+# TYPE collection_hardware_metric_payload_io_write counter
+collection_hardware_metric_payload_io_write{id="Qdrant Docs"} 0
+collection_hardware_metric_payload_io_write{id="sharding_collection"} 0
+collection_hardware_metric_payload_io_write{id="Midjourney"} 0
+# HELP collection_hardware_metric_vector_io_read Total IO vector read metrics of a collection
+# TYPE collection_hardware_metric_vector_io_read counter
+collection_hardware_metric_vector_io_read{id="Qdrant Docs"} 0
+collection_hardware_metric_vector_io_read{id="sharding_collection"} 0
+collection_hardware_metric_vector_io_read{id="Midjourney"} 0
+# HELP collection_hardware_metric_vector_io_write Total IO vector write metrics of a collection
+# TYPE collection_hardware_metric_vector_io_write counter
+collection_hardware_metric_vector_io_write{id="Qdrant Docs"} 0
+collection_hardware_metric_vector_io_write{id="sharding_collection"} 0
+collection_hardware_metric_vector_io_write{id="Midjourney"} 0
+# HELP memory_active_bytes Total number of bytes in active pages allocated by the application
+# TYPE memory_active_bytes gauge
+memory_active_bytes 62025728
+# HELP memory_allocated_bytes Total number of bytes allocated by the application
+# TYPE memory_allocated_bytes gauge
+memory_allocated_bytes 52676176
+# HELP memory_metadata_bytes Total number of bytes dedicated to metadata
+# TYPE memory_metadata_bytes gauge
+memory_metadata_bytes 14697856
+# HELP memory_resident_bytes Maximum number of bytes in physically resident data pages mapped
+# TYPE memory_resident_bytes gauge
+memory_resident_bytes 75587584
+# HELP memory_retained_bytes Total number of bytes in virtual memory mappings
+# TYPE memory_retained_bytes gauge
+memory_retained_bytes 97349632
+# HELP process_threads count of active threads
+# TYPE process_threads gauge
+process_threads 47
+# HELP process_open_mmaps count of open mmaps
+# TYPE process_open_mmaps gauge
+process_open_mmaps 577
+# HELP system_max_mmaps system wide limit of open mmaps
+# TYPE system_max_mmaps gauge
+system_max_mmaps 65530
+# HELP process_open_fds count of currently open file descriptors
+# TYPE process_open_fds gauge
+process_open_fds 83
+# HELP process_max_fds limit for open file descriptors
+# TYPE process_max_fds gauge
+process_max_fds 1048576
+# HELP process_minor_page_faults_total count of minor page faults which didn't cause a disk access
+# TYPE process_minor_page_faults_total counter
+process_minor_page_faults_total 88983
+# HELP process_major_page_faults_total count of disk accesses caused by a mmap page fault
+# TYPE process_major_page_faults_total counter
+process_major_page_faults_total 55

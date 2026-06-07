@@ -1,0 +1,132 @@
+# CI/CD Pipeline for Nexus-KB
+#
+# This workflow runs on every push and pull request. It performs:
+# 1. Lint and Format checks (Ruff)
+# 2. Docker Compose configuration validation (both root and Qdrant demo)
+# 3. Database migrations execution (Alembic)
+# 4. Live service integration testing (Pytest with PostgreSQL and Qdrant)
+
+name: 🚀 Nexus-KB CI Pipeline
+
+on:
+  push:
+    branches: [ "master", "main", "dev", "feature/*" ]
+  pull_request:
+    branches: [ "master", "main", "dev" ]
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  #  🧹 Lint & Format Check
+  # ────────────────────────────────────────────────────────────────
+  lint:
+    name: "🧹 Lint & Format"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Linting Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Check Code Style & Formatting
+        run: |
+          # Check imports and potential errors (non-blocking for existing codebase)
+          ruff check . --exit-zero
+          # Check formatting guidelines (non-blocking for existing codebase)
+          ruff format --check . --exit-zero
+
+  # ────────────────────────────────────────────────────────────────
+  #  🐳 Validate Docker Configurations
+  # ────────────────────────────────────────────────────────────────
+  docker-validate:
+    name: "🐳 Validate Docker Compose"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate Root Compose File
+        run: |
+          docker compose config
+
+      - name: Validate Qdrant Demo Compose Files
+        run: |
+          docker compose -f qdrant-multi-node-cluster/deployments/docker/docker-compose-single-node.yml config
+          docker compose -f qdrant-multi-node-cluster/deployments/docker/docker-compose-multi-node.yml config
+
+  # ────────────────────────────────────────────────────────────────
+  #  🧪 Pytest Integration Suite
+  # ────────────────────────────────────────────────────────────────
+  test:
+    name: "🧪 Test (Python ${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+    needs: [lint, docker-validate]
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nexus_kb
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: change-me
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      qdrant:
+        image: qdrant/qdrant:v1.13.3
+        ports:
+          - 6333:6333
+          - 6334:6334
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Service Health
+        run: |
+          # Wait for Qdrant HTTP REST port to open
+          until curl -s http://localhost:6333/healthz > /dev/null; do
+            echo "Waiting for Qdrant service..."
+            sleep 2
+          done
+          echo "Qdrant is healthy!"
+
+      - name: Apply Database Migrations (Alembic)
+        run: |
+          python -m alembic -c infrastructure/alembic.ini upgrade head
+
+      - name: Run Pytest Suite
+        env:
+          NEXUS_KB_RUN_LIVE_TESTS: "1"
+          POSTGRES_DSN: "postgresql+psycopg://nexus:change-me@localhost:5432/nexus_kb"
+          QDRANT_HOST: "localhost"
+          QDRANT_HTTP_PORT: "6333"
+        run: |
+          python -m pytest -v

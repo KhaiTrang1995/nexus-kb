@@ -1,0 +1,3 @@
+Plain text document.
+
+This file is part of Phase 1 and does not use Obsidian wikilinks.

@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+    redis-vector:
+        image: redis/redis-stack:latest
+        container_name: redis_vector_db
+        ports:
+            - '6379:6379' 
+            - '8002:8001' 
+        environment:
+            - REDIS_ARGS=--save 60 1 --loglevel notice --requirepass XXXXX
+        volumes:
+            - ./redis_data:/data
+        deploy:
+            resources:
+                limits:
+                    memory: 2G 
+        healthcheck:
+            test: ['CMD', 'redis-cli', '-a', 'XXXXX', 'ping']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+networks:
+    default:
+        name: chatbot_network

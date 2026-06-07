@@ -1,0 +1,21 @@
+global:
+    scrape_interval: 10s
+    evaluation_interval: 10s
+
+scrape_configs:
+    - job_name: 'qdrant'
+      metrics_path: /metrics
+      # Đọc API key từ file (được tạo bởi entrypoint script)
+      bearer_token_file: /etc/prometheus/qdrant_api_key
+      static_configs:
+          - targets:
+                - 'qdrant_node1:6333'
+                - 'qdrant_node2:6333'
+                - 'qdrant_node3:6333'
+            labels:
+                cluster: 'qdrant-local'
+
+    # Job để monitor chính Prometheus
+    - job_name: 'prometheus'
+      static_configs:
+          - targets: ['localhost:9090']

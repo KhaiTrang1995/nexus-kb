@@ -1,0 +1,91 @@
+name: Bug Report
+description: Something is broken or behaving unexpectedly.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill out the sections below as completely as you can.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: "When I do X, Y happens instead of Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps to reproduce the behavior.
+      placeholder: |
+        1. Setup virtual env and run docker compose
+        2. Execute CLI or REST API request
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the project is affected?
+      options:
+        - API Gateway / FastAPI (services/nexus-api)
+        - Ingestion Worker / Parser (workers/document-parser)
+        - Shared Contracts / Models (packages/shared-contracts)
+        - Vector DB Client (packages/vector-client)
+        - Database / Migrations (infrastructure)
+        - Qdrant Cluster Demo (qdrant-multi-node-cluster)
+        - Local Agent Config (.agents, .rules)
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "e.g. 3.10.12, 3.11.5"
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "e.g. Windows 11, Ubuntu 22.04, macOS Sonoma"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      description: Paste any console errors, stack traces, or API response bodies.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, configurations, anything else that might help.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I am running the latest version of the repository.
+          required: true

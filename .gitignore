@@ -1,0 +1,78 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+auth.json
+secrets/*
+!secrets/.gitkeep
+
+# Local agent runtime state
+.hermes/auth.json
+.hermes/logs/*
+!.hermes/logs/.gitkeep
+.hermes/sessions/*
+!.hermes/sessions/.gitkeep
+.hermes/cron/output/*
+!.hermes/cron/output/.gitkeep
+.hermes/plugins/*
+!.hermes/plugins/.gitkeep
+.hermes/hooks/*
+!.hermes/hooks/.gitkeep
+.hermes/skins/*
+!.hermes/skins/.gitkeep
+.claude/settings.local.json
+.claude/CLAUDE.local.md
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+out/
+target/
+coverage/
+.cache/
+.turbo/
+.next/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+tmp*/
+
+# Data, models, and generated artifacts
+data/*
+!data/.gitkeep
+datasets/*
+!datasets/.gitkeep
+models/*
+!models/.gitkeep
+*.gguf
+*.safetensors
+*.onnx
+*.sqlite
+*.db
+*.log
+
+# Qdrant demo runtime data
+qdrant-multi-node-cluster/deployments/docker/data/*
+!qdrant-multi-node-cluster/deployments/docker/data/.gitkeep
+qdrant-multi-node-cluster/data/*
+!qdrant-multi-node-cluster/data/.gitkeep
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

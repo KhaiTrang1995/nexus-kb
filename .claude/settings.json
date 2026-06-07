@@ -1,0 +1,18 @@
+{
+    "permissions": {
+        "allow": [
+            "read_file",
+            "write_file",
+            "run_in_terminal",
+            "grep_search",
+            "file_search"
+        ],
+        "deny": [
+            "delete_file"
+        ]
+    },
+    "model": "claude-sonnet-4-5",
+    "hooks": {
+        "pre_tool_use": ".claude/hooks/validate-bash.sh"
+    }
+}

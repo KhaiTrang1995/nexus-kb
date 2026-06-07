@@ -1,0 +1,33 @@
+# CODEOWNERS — Enterprise Knowledge Hub (Nexus-KB)
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+*                       @KhaiTrang1995
+
+# API Services
+/services/              @KhaiTrang1995
+
+# Document Parser Workers
+/workers/               @KhaiTrang1995
+
+# Shared Packages & Client Wrappers
+/packages/              @KhaiTrang1995
+
+# Database Migrations & Schemas
+/infrastructure/        @KhaiTrang1995
+/docker-compose.yml     @KhaiTrang1995
+
+# Qdrant HA cluster demo
+/qdrant-multi-node-cluster/ @KhaiTrang1995
+
+# Agent Configurations & Local rules
+/.agents/               @KhaiTrang1995
+/.claude/               @KhaiTrang1995
+/.codex/                @KhaiTrang1995
+/.hermes/               @KhaiTrang1995
+/.rules                 @KhaiTrang1995
+/AGENTS.md              @KhaiTrang1995
+
+# Documentation
+/docs/                  @KhaiTrang1995
+*.md                    @KhaiTrang1995
