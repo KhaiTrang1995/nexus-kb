@@ -3,576 +3,1306 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus-KB - Enterprise RAG and Knowledge Graph Engine</title>
-  <meta name="description" content="Open-source reference architecture for enterprise RAG, audit and review workflows, MCP source connectors, Knowledge Graph construction, Qdrant vector search, and LLM gateway routing.">
-  <meta name="keywords" content="RAG, Knowledge Graph, Qdrant, PostgreSQL, FastAPI, MCP, RBAC, audit, review, LLM Gateway">
+  <title>Nexus-KB - Enterprise RAG & Knowledge Graph Engine</title>
+  <meta name="description" content="Open-source reference architecture for building an enterprise RAG and Knowledge Graph Engine with MCP-based connectors, governed AI workflows, and high-availability vector search.">
+  <meta name="keywords" content="RAG, Knowledge Graph, Qdrant, PostgreSQL, FastAPI, Obsidian, Vector Search, AI Governance">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- CSS Styles -->
   <style>
     :root {
-      --bg: #0b0d10;
-      --panel: #141820;
-      --panel-2: #10141b;
-      --line: #263241;
-      --line-strong: #3a4b5f;
-      --text: #eef2f6;
-      --muted: #a8b3c1;
-      --dim: #758294;
-      --blue: #5aa9ff;
-      --teal: #3dd6c6;
-      --green: #7bd88f;
-      --amber: #f2c46d;
-      --red: #ff7a7a;
-      --radius: 8px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg-dark: #07070c;
+      --bg-surface: #0f0f18;
+      --bg-card: rgba(20, 20, 32, 0.65);
+      --border-color: rgba(99, 102, 241, 0.12);
+      --border-hover: rgba(99, 102, 241, 0.35);
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.45);
+      --secondary: #818cf8;
+      --accent: #22d3ee;
+      --accent-glow: rgba(34, 211, 238, 0.25);
+      --violet: #a78bfa;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --font-heading: 'Outfit', 'Inter', system-ui, sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --alert-tip: rgba(16, 185, 129, 0.1);
+      --alert-tip-border: rgba(16, 185, 129, 0.3);
+      --alert-warn: rgba(245, 158, 11, 0.1);
+      --alert-warn-border: rgba(245, 158, 11, 0.3);
+      --alert-important: rgba(99, 102, 241, 0.1);
+      --alert-important-border: rgba(99, 102, 241, 0.3);
     }
 
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      line-height: 1.55;
+      padding: 0;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Background Effects */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
-      background:
-        linear-gradient(rgba(90, 169, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(90, 169, 255, 0.03) 1px, transparent 1px);
-      background-size: 44px 44px;
+      background: 
+        radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.12), transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(167, 139, 250, 0.08), transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.03), transparent 50%);
       pointer-events: none;
-      z-index: -1;
+      z-index: -2;
     }
 
-    a { color: inherit; }
+    /* Micro Grid Drift Animation */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(99, 102, 241, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.02) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+      pointer-events: none;
+      z-index: -1;
+      animation: gridDrift 90s linear infinite;
+    }
+
+    @keyframes gridDrift {
+      from { background-position: 0 0; }
+      to { background-position: 56px 56px; }
+    }
+
+    /* Navigation */
     header {
       position: sticky;
       top: 0;
-      z-index: 10;
-      background: rgba(11, 13, 16, 0.92);
-      border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(12px);
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(7, 7, 12, 0.8);
+      border-bottom: 1px solid var(--border-color);
     }
 
-    .nav {
-      max-width: 1180px;
+    .nav-container {
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 14px 20px;
+      padding: 16px 24px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 20px;
+      align-items: center;
     }
 
-    .brand {
+    .logo {
       display: flex;
       align-items: center;
       gap: 10px;
       text-decoration: none;
-      font-weight: 800;
-      letter-spacing: 0;
+      color: #fff;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.25rem;
     }
 
-    .mark {
+    .logo-icon {
       width: 32px;
       height: 32px;
-      border: 1px solid var(--line-strong);
       border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary), var(--violet));
       display: grid;
       place-items: center;
-      color: var(--teal);
-      background: #101821;
-      font-family: var(--mono);
+      font-weight: 800;
       font-size: 0.9rem;
+      box-shadow: 0 0 16px var(--primary-glow);
     }
 
-    .links {
+    .nav-links {
       display: flex;
       align-items: center;
-      gap: 18px;
-      color: var(--muted);
-      font-size: 0.92rem;
+      gap: 24px;
     }
 
-    .links a {
+    .nav-link {
       text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
     }
 
-    .links a:hover {
-      color: var(--text);
+    .nav-link:hover {
+      color: #fff;
     }
 
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 40px;
-      padding: 0 16px;
-      border-radius: var(--radius);
-      border: 1px solid var(--line-strong);
-      background: #17202a;
-      color: var(--text);
+    .nav-btn {
       text-decoration: none;
-      font-weight: 700;
-      font-size: 0.92rem;
+      background: linear-gradient(135deg, var(--primary), var(--violet));
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .button.primary {
-      border-color: #2b756f;
-      background: #12312f;
-      color: #dffdf9;
+    .nav-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
     }
 
-    main { overflow: hidden; }
+    /* Hero Section */
     .hero {
-      max-width: 1180px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 78px 20px 56px;
-      display: grid;
-      grid-template-columns: minmax(0, 1.04fr) minmax(420px, 0.96fr);
-      gap: 36px;
-      align-items: center;
+      padding: 80px 24px 48px;
+      text-align: center;
+      position: relative;
     }
 
-    .eyebrow {
+    .hero-badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      border: 1px solid #285a55;
-      background: #102321;
-      color: var(--teal);
-      border-radius: 999px;
-      padding: 6px 12px;
-      font-family: var(--mono);
-      font-size: 0.78rem;
-      font-weight: 700;
-      margin-bottom: 18px;
-    }
-
-    h1 {
-      font-size: clamp(2.5rem, 6vw, 4.8rem);
-      line-height: 1.02;
-      letter-spacing: 0;
-      margin: 0 0 22px;
-    }
-
-    .lead {
-      color: var(--muted);
-      font-size: clamp(1rem, 2vw, 1.18rem);
-      max-width: 760px;
-      margin: 0 0 28px;
-    }
-
-    .actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid var(--border-hover);
+      padding: 6px 14px;
+      border-radius: 100px;
+      color: var(--secondary);
+      font-size: 0.8rem;
+      font-weight: 600;
       margin-bottom: 24px;
+      letter-spacing: 0.05em;
     }
 
-    .status-strip {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      max-width: 720px;
+    .hero h1 {
+      font-family: var(--font-heading);
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 70%, #c084fc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
-    .metric {
-      border: 1px solid var(--line);
-      background: rgba(20, 24, 32, 0.72);
-      border-radius: var(--radius);
-      padding: 12px;
+    .hero p {
+      max-width: 760px;
+      margin: 0 auto 36px;
+      font-size: clamp(1rem, 2.2vw, 1.15rem);
+      color: var(--text-muted);
     }
 
-    .metric strong {
-      display: block;
-      color: var(--text);
-      font-size: 1.05rem;
-    }
-
-    .metric span {
-      color: var(--dim);
-      font-size: 0.82rem;
-    }
-
-    .terminal {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: #0f131a;
-      min-width: 0;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
-    }
-
-    .terminal-head {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--line);
+    .hero-buttons {
       display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 56px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .dots { display: flex; gap: 7px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; }
-    .red { background: var(--red); }
-    .amber { background: var(--amber); }
-    .green { background: var(--green); }
-
-    .tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-    .tab {
-      border: 1px solid var(--line);
-      background: #121821;
-      color: var(--muted);
-      border-radius: 6px;
-      padding: 5px 9px;
+      gap: 8px;
       cursor: pointer;
-      font-family: var(--mono);
-      font-size: 0.74rem;
     }
-    .tab.active {
-      border-color: #2b756f;
-      color: var(--teal);
-      background: #102321;
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--violet));
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+      border: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(99, 102, 241, 0.45);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    /* Terminal Simulator */
+    .terminal-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: 
+        0 20px 48px rgba(0, 0, 0, 0.5),
+        0 0 32px rgba(99, 102, 241, 0.08);
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .terminal-header {
+      background: rgba(20, 20, 30, 0.75);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background-color: #ef4444; }
+    .terminal-dot.yellow { background-color: #f59e0b; }
+    .terminal-dot.green { background-color: #10b981; }
+
+    .terminal-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .terminal-tab {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--font-heading);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .terminal-tab.active {
+      color: var(--accent);
+      background: rgba(34, 211, 238, 0.08);
     }
 
     .terminal-body {
-      padding: 18px;
-      height: 344px;
-      overflow: auto;
-      font-family: var(--mono);
-      font-size: 0.82rem;
-      color: #cdd7e3;
-      line-height: 1.55;
+      padding: 24px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      height: 300px;
+      overflow-y: auto;
+      line-height: 1.5;
     }
 
-    .line { margin: 0 0 7px; white-space: nowrap; }
-    .prompt { color: var(--teal); }
-    .out { color: #95a3b5; }
-    .blue { color: var(--blue); }
-    .ok { color: var(--green); }
-    .warn { color: var(--amber); }
+    .terminal-line {
+      margin-bottom: 8px;
+    }
 
-    section {
-      max-width: 1180px;
+    .terminal-prompt {
+      color: var(--accent);
+      margin-right: 8px;
+    }
+
+    .terminal-output {
+      color: #94a3b8;
+    }
+
+    .text-green { color: #10b981; }
+    .text-cyan { color: #06b6d4; }
+    .text-violet { color: #a78bfa; }
+
+    /* Features Grid */
+    .features {
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 60px 20px;
+      padding: 80px 24px;
     }
 
-    .section-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: end;
-      gap: 18px;
-      margin-bottom: 22px;
+    .section-header {
+      text-align: center;
+      margin-bottom: 56px;
     }
 
-    .section-title h2 {
-      margin: 0;
-      font-size: clamp(1.7rem, 4vw, 2.35rem);
-      letter-spacing: 0;
+    .section-header h2 {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
     }
 
-    .section-title p {
-      margin: 0;
-      color: var(--muted);
+    .section-header p {
+      color: var(--text-muted);
       max-width: 600px;
+      margin: 0 auto;
+      font-size: 0.95rem;
     }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
     }
 
     .card {
-      border: 1px solid var(--line);
-      background: rgba(20, 24, 32, 0.74);
-      border-radius: var(--radius);
-      padding: 20px;
-      min-height: 184px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
     }
 
-    .card .tag {
-      display: inline-flex;
-      margin-bottom: 14px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: #101821;
-      border: 1px solid var(--line);
-      color: var(--teal);
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      font-weight: 700;
+    .card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 32px rgba(99, 102, 241, 0.12);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.08);
+      display: grid;
+      place-items: center;
+      color: var(--secondary);
+      font-size: 1.2rem;
+      margin-bottom: 20px;
     }
 
     .card h3 {
-      margin: 0 0 9px;
-      font-size: 1.05rem;
+      font-family: var(--font-heading);
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 12px;
     }
 
     .card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.93rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      flex: 1;
     }
 
-    .setup {
-      background: #0f1318;
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-      max-width: none;
+    /* Getting Started / Setup */
+    .getting-started {
+      background: rgba(15, 15, 24, 0.5);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 80px 24px;
     }
 
-    .setup-inner {
-      max-width: 980px;
+    .getting-started-container {
+      max-width: 900px;
       margin: 0 auto;
-      padding: 0 20px;
     }
 
-    .steps {
+    .setup-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .setup-tab-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-family: var(--font-heading);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .setup-tab-btn.active {
+      background: rgba(99, 102, 241, 0.08);
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
+    }
+
+    .setup-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      display: none;
+    }
+
+    .setup-content.active {
+      display: block;
+    }
+
+    .setup-step {
+      margin-bottom: 24px;
+    }
+
+    .setup-step:last-child {
+      margin-bottom: 0;
+    }
+
+    .setup-step h4 {
+      font-family: var(--font-heading);
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .setup-step-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
       display: grid;
-      gap: 12px;
+      place-items: center;
+      font-size: 0.75rem;
+      font-weight: 700;
     }
 
-    .step {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-      padding: 16px;
+    .setup-step p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 12px;
     }
 
-    .step h3 {
-      margin: 0 0 10px;
-      font-size: 1rem;
-    }
-
-    code, pre {
-      font-family: var(--mono);
-    }
-
-    pre {
-      margin: 0;
-      padding: 13px;
+    .code-block {
+      background: rgba(7, 7, 11, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
       overflow-x: auto;
-      border: 1px solid var(--line);
+      color: #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .code-text {
+      white-space: nowrap;
+      overflow-x: auto;
+    }
+
+    .code-copy-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: color 0.2s;
+      padding-left: 10px;
+    }
+
+    .code-copy-btn:hover {
+      color: #fff;
+    }
+
+    /* Embedded Documentation Viewer (Single Page Tab Reader) */
+    .docs-viewer-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+
+    .docs-viewer {
+      display: flex;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      overflow: hidden;
+      min-height: 580px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+    }
+
+    .docs-sidebar {
+      width: 260px;
+      background: rgba(15, 15, 25, 0.6);
+      border-right: 1px solid var(--border-color);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .docs-sidebar-header {
+      font-family: var(--font-heading);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0 12px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      margin-bottom: 12px;
+    }
+
+    .docs-menu-btn {
+      background: transparent;
+      border: none;
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-family: var(--font-heading);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .docs-menu-btn:hover {
+      background: rgba(255, 255, 255, 0.02);
+      color: #fff;
+    }
+
+    .docs-menu-btn.active {
+      background: rgba(99, 102, 241, 0.08);
+      color: var(--secondary);
+      box-shadow: 1px 0 0 var(--primary) inset;
+    }
+
+    .docs-body-panel {
+      flex: 1;
+      padding: 40px;
+      overflow-y: auto;
+      max-height: 650px;
+      background: rgba(9, 9, 15, 0.3);
+    }
+
+    .docs-doc-content {
+      display: none;
+    }
+
+    .docs-doc-content.active {
+      display: block;
+    }
+
+    /* Formatted Markdown classes for inline elements */
+    .md-doc h1 {
+      font-family: var(--font-heading);
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 8px;
+      color: #fff;
+    }
+
+    .md-doc h2 {
+      font-family: var(--font-heading);
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 28px 0 16px;
+      color: var(--secondary);
+    }
+
+    .md-doc h3 {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 20px 0 12px;
+      color: #fff;
+    }
+
+    .md-doc p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+
+    .md-doc ul {
+      margin-left: 20px;
+      margin-bottom: 16px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .md-doc li {
+      margin-bottom: 6px;
+    }
+
+    .md-doc code {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #cbd5e1;
+    }
+
+    .md-doc pre {
+      background: rgba(7, 7, 12, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+
+    .md-doc pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 0.8rem;
+    }
+
+    /* GitHub styled Alerts */
+    .md-alert {
+      padding: 14px 16px;
+      border-left: 4px solid transparent;
       border-radius: 6px;
-      background: #0a0d12;
-      color: #d7e1ec;
-      font-size: 0.82rem;
-      line-height: 1.5;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
     }
 
+    .md-alert p {
+      margin-bottom: 0 !important;
+    }
+
+    .md-alert-tip {
+      background-color: var(--alert-tip);
+      border-color: var(--alert-tip-border);
+      color: #34d399;
+    }
+
+    .md-alert-warn {
+      background-color: var(--alert-warn);
+      border-color: var(--alert-warn-border);
+      color: #f59e0b;
+    }
+
+    .md-alert-important {
+      background-color: var(--alert-important);
+      border-color: var(--alert-important-border);
+      color: var(--secondary);
+    }
+
+    /* Footer */
     footer {
-      border-top: 1px solid var(--line);
-      padding: 34px 20px;
-      color: var(--dim);
+      border-top: 1px solid var(--border-color);
+      padding: 48px 24px;
       text-align: center;
-      font-size: 0.88rem;
+      background: var(--bg-dark);
+      position: relative;
+      z-index: 10;
     }
 
-    footer a {
-      color: var(--muted);
-      text-decoration: none;
-      margin: 0 8px;
+    .footer-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
     }
 
-    @media (max-width: 900px) {
-      .hero { grid-template-columns: 1fr; padding-top: 52px; }
-      .terminal-body { height: 300px; }
-      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .section-title { display: block; }
-      .section-title p { margin-top: 8px; }
+    .footer-links {
+      display: flex;
+      gap: 24px;
     }
 
-    @media (max-width: 640px) {
-      .links { display: none; }
-      .status-strip { grid-template-columns: 1fr; }
-      .grid { grid-template-columns: 1fr; }
-      .line { white-space: normal; }
+    .footer-link-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .footer-link-btn:hover {
+      color: var(--text-main);
+    }
+
+    .copyright {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero { padding: 64px 16px; }
+      .features { padding: 64px 16px; }
+      .setup-tabs { flex-direction: column; gap: 8px; }
+      .docs-viewer { flex-direction: column; }
+      .docs-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
+      .docs-body-panel { padding: 24px; }
     }
   </style>
 </head>
 <body>
+
+  <!-- Navigation -->
   <header>
-    <nav class="nav">
-      <a href="#" class="brand"><span class="mark">N</span>Nexus-KB</a>
-      <div class="links">
-        <a href="#features">Features</a>
-        <a href="#setup">Run locally</a>
-        <a href="https://github.com/KhaiTrang1995/nexus-kb" class="button primary">GitHub</a>
-      </div>
-    </nav>
+    <div class="nav-container">
+      <a href="#" class="logo">
+        <div class="logo-icon">N</div>
+        Nexus-KB
+      </a>
+      <nav class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#setup" class="nav-link">Getting Started</a>
+        <a href="#docs" class="nav-link">Documentation Hub</a>
+        <a href="https://github.com/KhaiTrang1995/nexus-kb" class="nav-btn"><i class="fab fa-github"></i> GitHub</a>
+      </nav>
+    </div>
   </header>
 
   <main>
-    <div class="hero">
-      <div>
-        <div class="eyebrow">LOCAL MVP THROUGH PHASE 5</div>
-        <h1>Governed RAG and Knowledge Graph Engine</h1>
-        <p class="lead">A public-safe reference implementation for document ingestion, audit and review, MCP source access, vector retrieval, graph construction, and LLM Gateway routing.</p>
-        <div class="actions">
-          <a href="#setup" class="button primary">Run the stack</a>
-          <a href="docs/architecture.md" class="button">Architecture</a>
-          <a href="docs/action.md" class="button">Roadmap</a>
-        </div>
-        <div class="status-strip">
-          <div class="metric"><strong>36 passing</strong><span>offline tests in current suite</span></div>
-          <div class="metric"><strong>4 live</strong><span>Postgres/Qdrant/graph checks</span></div>
-          <div class="metric"><strong>5 phases</strong><span>implemented as local slices</span></div>
-        </div>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-badge">PHASE 1 MVP + MIGRATIONS</div>
+      <h1>Enterprise RAG &<br><span style="background: linear-gradient(135deg, var(--accent), var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent;">Knowledge Graph Engine</span></h1>
+      <p>An open-source reference architecture for building secure, permission-aware vector search pipelines, document parsing, and structured entity graphs.</p>
+      
+      <div class="hero-buttons">
+        <a href="#setup" class="btn btn-primary"><i class="fas fa-play"></i> Start Building</a>
+        <a href="#docs" class="btn btn-secondary"><i class="fas fa-book"></i> Read Governance Docs</a>
       </div>
 
-      <div class="terminal">
-        <div class="terminal-head">
-          <div class="dots">
-            <span class="dot red"></span>
-            <span class="dot amber"></span>
-            <span class="dot green"></span>
+      <!-- Terminal Simulator -->
+      <div class="terminal-container">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <div class="terminal-dot red"></div>
+            <div class="terminal-dot yellow"></div>
+            <div class="terminal-dot green"></div>
           </div>
-          <div class="tabs">
-            <button class="tab active" onclick="switchTab(this, 'ingest')">ingest</button>
-            <button class="tab" onclick="switchTab(this, 'search')">search</button>
-            <button class="tab" onclick="switchTab(this, 'graph')">graph</button>
-            <button class="tab" onclick="switchTab(this, 'mcp')">mcp</button>
+          <div class="terminal-tabs">
+            <button class="terminal-tab active" onclick="switchTerminalTab(this, 'ingest')">Ingest CLI</button>
+            <button class="terminal-tab" onclick="switchTerminalTab(this, 'search')">Search Response</button>
+            <button class="terminal-tab" onclick="switchTerminalTab(this, 'migrations')">Alembic Migrations</button>
           </div>
         </div>
-        <div class="terminal-body" id="terminal">
-          <p class="line"><span class="prompt">$</span> python -m nexus_document_parser.cli docs/vault --source-type obsidian</p>
-          <p class="line out">audit: INGEST_START, DOCUMENT_READ, CHUNK_GENERATED</p>
-          <p class="line out">chunks: markdown-aware section paths and metadata extracted</p>
-          <p class="line out">review: low-confidence candidates queued</p>
-          <p class="line out">vector: approved chunks upserted to Qdrant collection <span class="blue">nexus_chunks</span></p>
-          <p class="line ok">ingestion completed</p>
+        <div class="terminal-body" id="terminal-content">
+          <!-- Default Ingest Terminal lines -->
+          <div class="terminal-line"><span class="terminal-prompt">$</span>python -m nexus_document_parser.cli docs/vault/ --source-type obsidian</div>
+          <div class="terminal-line terminal-output">Initializing Ingestion Pipeline...</div>
+          <div class="terminal-line terminal-output">Connecting to PostgreSQL at localhost:5432... <span class="text-green">Success</span></div>
+          <div class="terminal-line terminal-output">Connecting to Qdrant at localhost:6333... <span class="text-green">Success</span></div>
+          <div class="terminal-line terminal-output">Loading vault files: 12 markdown documents discovered.</div>
+          <div class="terminal-line terminal-output">Extracting YAML Frontmatter & wikilinks...</div>
+          <div class="terminal-line terminal-output">Splitting into 84 chunks using Markdown-aware chunker.</div>
+          <div class="terminal-line terminal-output">Generating embeddings using <span class="text-violet">BAAI/bge-m3</span>...</div>
+          <div class="terminal-line terminal-output">Upserting vector points to collection 'nexus_chunks'...</div>
+          <div class="terminal-line terminal-output text-green">=== Ingestion Completed Successfully ===</div>
+          <div class="terminal-line terminal-output">{ "run_id": "8f2a1b9d-4e8c-4c4c-8b8a-9f5b2d8e4f5a", "documents_indexed": 12, "chunks_indexed": 84 }</div>
         </div>
-      </div>
-    </div>
-
-    <section id="features">
-      <div class="section-title">
-        <h2>Implemented Surface</h2>
-        <p>Each area is intentionally scoped for local verification and clean service boundaries.</p>
-      </div>
-      <div class="grid">
-        <article class="card">
-          <span class="tag">INGEST</span>
-          <h3>Markdown and Obsidian Pipeline</h3>
-          <p>Parses frontmatter, tags, wikilinks, headings, mime data, and section-aware chunks before embedding.</p>
-        </article>
-        <article class="card">
-          <span class="tag">RETRIEVE</span>
-          <h3>Hybrid Search</h3>
-          <p>Combines Qdrant vector results with PostgreSQL metadata joins, lexical reranking, snippets, filters, and graph context.</p>
-        </article>
-        <article class="card">
-          <span class="tag">GOVERN</span>
-          <h3>Audit and Review</h3>
-          <p>Records sensitive workflow events and supports approve, reject, and modify review actions with mock reviewer RBAC.</p>
-        </article>
-        <article class="card">
-          <span class="tag">MCP</span>
-          <h3>Confluence Bridge</h3>
-          <p>Provides source discovery and document read tools with user-context authorization, disabled mutations, and redacted structured errors.</p>
-        </article>
-        <article class="card">
-          <span class="tag">GRAPH</span>
-          <h3>Knowledge Graph Builder</h3>
-          <p>Builds entities and relationships from approved chunks, merges duplicates, and stores confidence plus provenance.</p>
-        </article>
-        <article class="card">
-          <span class="tag">LLM</span>
-          <h3>Gateway Slice</h3>
-          <p>Centralizes model routing, prompt categories, cache behavior, retry handling, telemetry, and provider abstraction.</p>
-        </article>
       </div>
     </section>
 
-    <section class="setup" id="setup">
-      <div class="setup-inner">
-        <div class="section-title">
-          <h2>Run Locally</h2>
-          <p>Commands match the current Python package layout.</p>
+    <!-- Features Section -->
+    <section class="features" id="features">
+      <div class="section-header">
+        <h2>Engine Features</h2>
+        <p>Built with reliable, enterprise-grade components designed to decouple pipeline ingestion from storage layers.</p>
+      </div>
+
+      <div class="grid">
+        <!-- Card 1 -->
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-file-invoice"></i></div>
+          <h3>Obsidian Ingestion</h3>
+          <p>Extracts YAML metadata, wiki-style links (`[[InternalLink]]`), and markdown tags. Prepares rich seeds for building relation graphs in future stages.</p>
         </div>
-        <div class="steps">
-          <div class="step">
-            <h3>1. Install dependencies</h3>
-            <pre>python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt</pre>
+
+        <!-- Card 2 -->
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-database"></i></div>
+          <h3>Dual-Store Architecture</h3>
+          <p>Structured document logs, metadata records, and audit paths are persisted in PostgreSQL, while vector coordinates reside in Qdrant.</p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-search"></i></div>
+          <h3>Hybrid Reranking</h3>
+          <p>Search retrievals combine vector cosine similarity with metadata filters (tags, directories) and title-heading text scoring for precise answers.</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-history"></i></div>
+          <h3>Alembic Database Versioning</h3>
+          <p>Full support for SQLAlchemy ORM and database versioning. Schema adjustments are managed dynamically through SQL version paths.</p>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-shield-halved"></i></div>
+          <h3>Governed AI Workflows</h3>
+          <p>Configured with robust repo boundaries. Code templates, CI/CD scripts, and agent rules prevent leakages of raw customer logs or secrets.</p>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="card">
+          <div class="card-icon"><i class="fas fa-cubes"></i></div>
+          <h3>HA Vector Demo</h3>
+          <p>Includes a runnable multi-node Qdrant cluster compose file equipped with Prometheus monitoring dashboards for validating network workloads.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Setup Guide Section -->
+    <section class="getting-started" id="setup">
+      <div class="getting-started-container">
+        <div class="section-header">
+          <h2>Getting Started</h2>
+          <p>Quick instructions to spin up the local development stack and ingest your first documents.</p>
+        </div>
+
+        <div class="setup-tabs">
+          <button class="setup-tab-btn active" onclick="switchSetupTab(this, 'windows')">Windows (PowerShell)</button>
+          <button class="setup-tab-btn" onclick="switchSetupTab(this, 'linux')">Linux / macOS</button>
+        </div>
+
+        <!-- Windows Tab Content -->
+        <div class="setup-content active" id="setup-windows">
+          <div class="setup-step">
+            <h4><span class="setup-step-num">1</span>Set Up Virtual Environment</h4>
+            <p>Initialize your Python environment and install the required packages:</p>
+            <div class="code-block">
+              <span class="code-text">python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
           </div>
-          <div class="step">
-            <h3>2. Start storage and migrate</h3>
-            <pre>docker compose up -d
-alembic -c infrastructure/alembic.ini upgrade head</pre>
+
+          <div class="setup-step">
+            <h4><span class="setup-step-num">2</span>Bring Up Storage Engines</h4>
+            <p>Spin up local PostgreSQL and Qdrant containers in the background:</p>
+            <div class="code-block">
+              <span class="code-text">docker compose up -d</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
           </div>
-          <div class="step">
-            <h3>3. Start FastAPI</h3>
-            <pre>$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api"
-uvicorn nexus_api.main:app --reload</pre>
+
+          <div class="setup-step">
+            <h4><span class="setup-step-num">3</span>Apply Database Migrations</h4>
+            <p>Migrate the schema schema head using Alembic:</p>
+            <div class="code-block">
+              <span class="code-text">alembic -c infrastructure/alembic.ini upgrade head</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
           </div>
-          <div class="step">
-            <h3>4. Verify</h3>
-            <pre>python -m pytest -q
-$env:NEXUS_KB_RUN_LIVE_TESTS="1"
-$env:POSTGRES_DSN="postgresql://nexus:nexus_dev_password@localhost:5432/nexus_kb"
-python -m pytest tests/test_live_integration_scaffold.py tests/test_live_graph_repository.py -q</pre>
+
+          <div class="setup-step">
+            <h4><span class="setup-step-num">4</span>Launch the FastAPI Server</h4>
+            <p>Initialize environment variables and start the server:</p>
+            <div class="code-block">
+              <span class="code-text">$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;services/nexus-api"; uvicorn nexus_api.main:app --reload</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
           </div>
+        </div>
+
+        <!-- Linux / macOS Tab Content -->
+        <div class="setup-content" id="setup-linux">
+          <div class="setup-step">
+            <h4><span class="setup-step-num">1</span>Set Up Virtual Environment</h4>
+            <p>Initialize your Python environment and install the required packages:</p>
+            <div class="code-block">
+              <span class="code-text">python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
+          </div>
+
+          <div class="setup-step">
+            <h4><span class="setup-step-num">2</span>Bring Up Storage Engines</h4>
+            <p>Spin up local PostgreSQL and Qdrant containers in the background:</p>
+            <div class="code-block">
+              <span class="code-text">docker compose up -d</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
+          </div>
+
+          <div class="setup-step">
+            <h4><span class="setup-step-num">3</span>Apply Database Migrations</h4>
+            <p>Migrate the database schema using Alembic:</p>
+            <div class="code-block">
+              <span class="code-text">alembic -c infrastructure/alembic.ini upgrade head</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
+          </div>
+
+          <div class="setup-step">
+            <h4><span class="setup-step-num">4</span>Launch the FastAPI Server</h4>
+            <p>Initialize environment variables and start the server:</p>
+            <div class="code-block">
+              <span class="code-text">export PYTHONPATH="packages/shared-contracts:packages/vector-client:workers/document-parser:services/nexus-api" && uvicorn nexus_api.main:app --reload</span>
+              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Embedded Documentation Section -->
+    <section class="docs-viewer-section" id="docs">
+      <div class="section-header">
+        <h2>Documentation Hub</h2>
+        <p>Read repository operating guides, safety boundaries, and contributing procedures directly below without leaving the page.</p>
+      </div>
+
+      <div class="docs-viewer">
+        <!-- Sidebar Navigation -->
+        <div class="docs-sidebar">
+          <div class="docs-sidebar-header">Governance & Policy</div>
+          <button class="docs-menu-btn active" onclick="switchDocTab(this, 'agent-guide')"><i class="fas fa-robot"></i> Agent Guide</button>
+          <button class="docs-menu-btn" onclick="switchDocTab(this, 'contributing')"><i class="fas fa-hands-helping"></i> Contributing</button>
+          <button class="docs-menu-btn" onclick="switchDocTab(this, 'security')"><i class="fas fa-user-shield"></i> Security Policy</button>
+        </div>
+
+        <!-- Document Body Panel -->
+        <div class="docs-body-panel">
+          
+          <!-- Tab 1: Agent Guide (AGENTS.md) -->
+          <div class="docs-doc-content active md-doc" id="doc-agent-guide">
+            <h1>Repository Agent Guide</h1>
+            <p>This file defines the operating baseline for AI coding agents and human contributors working in this repository.</p>
+            
+            <h2>Scope</h2>
+            <p>The repository contains:</p>
+            <ul>
+              <li>Architecture documentation for Enterprise Knowledge Hub.</li>
+              <li>Project-scoped agent configuration under <code>.codex/</code>, <code>.claude/</code>, <code>.agents/</code>, and <code>.hermes/</code>.</li>
+              <li>A runnable Qdrant multi-node demo under <code>qdrant-multi-node-cluster/</code>.</li>
+            </ul>
+
+            <h2>Required Workflow</h2>
+            <ul>
+              <li>Read <code>README.md</code> and <code>docs/architecture.md</code> before changing architecture, rules, or implementation structure.</li>
+              <li>Check the target area before editing:
+                <ul>
+                  <li>Root and <code>docs/</code>: project documentation and governance.</li>
+                  <li><code>.codex/</code>, <code>.claude/</code>, <code>.agents/</code>, <code>.hermes/</code>: agent configuration and local automation.</li>
+                  <li><code>qdrant-multi-node-cluster/</code>: runnable Python and Docker demo.</li>
+                </ul>
+              </li>
+              <li>Keep changes scoped. Do not rewrite unrelated generated files, local runtime state, or private configuration.</li>
+              <li>Prefer explicit, reproducible commands. Do not rely on undocumented local state.</li>
+              <li>Before writing code, inspect existing patterns and update tests or verification steps when behavior changes.</li>
+            </ul>
+
+            <h2>Architecture Rules</h2>
+            <ul>
+              <li>Treat <code>docs/architecture.md</code> as the source of truth.</li>
+              <li>Use clean boundaries between UI, backend services, workers, MCP connectors, and storage.</li>
+              <li>Do not bypass RBAC, audit logging, or human review in workflows that process sensitive documents.</li>
+              <li>Keep LLM calls behind a gateway that supports model routing, caching, retries, and observability.</li>
+              <li>Keep raw documents, model files, vector snapshots, and audit exports out of git.</li>
+            </ul>
+
+            <h2>Security Rules</h2>
+            <div class="md-alert md-alert-warn">
+              <p><strong>[SECURITY RULE]</strong> Never commit credentials, API keys, internal hostnames, customer data, logs, local sessions, or agent memory.</p>
+            </div>
+            <ul>
+              <li>Use <code>.env.example</code> for required configuration keys and document expected values without secrets.</li>
+              <li>Prefer least-privilege access for MCP connectors and storage clients.</li>
+              <li>Fail closed for authorization checks and document access checks.</li>
+            </ul>
+
+            <h2>Verification Guidance</h2>
+            <ul>
+              <li>Documentation changes: review links and headings manually.</li>
+              <li>Qdrant demo changes: run tests from <code>qdrant-multi-node-cluster/</code> with <code>make test</code> or <code>python -m unittest discover -s tests</code>.</li>
+              <li>Agent configuration changes: verify that referenced files exist and local-only files remain ignored.</li>
+            </ul>
+
+            <h2>Writing Standards</h2>
+            <ul>
+              <li>Be direct and technical.</li>
+              <li>Avoid marketing claims that are not backed by implementation or documentation.</li>
+              <li>Use consistent terminology: RAG, Knowledge Graph, MCP, RBAC, audit, queue, worker, vector database.</li>
+              <li>Keep examples public-safe and free of company-private data.</li>
+            </ul>
+          </div>
+
+          <!-- Tab 2: Contributing (CONTRIBUTING.md) -->
+          <div class="docs-doc-content md-doc" id="doc-contributing">
+            <h1>Contributing</h1>
+            <p>Thank you for considering a contribution to Enterprise Knowledge Hub.</p>
+            
+            <h2>Before You Start</h2>
+            <ul>
+              <li>Read <code>README.md</code>, <code>docs/architecture.md</code>, and <code>AGENTS.md</code>.</li>
+              <li>Keep changes small and focused.</li>
+              <li>Do not commit secrets, runtime logs, local sessions, generated cache, raw documents, model weights, or database data.</li>
+            </ul>
+
+            <h2>Contribution Types</h2>
+            <p>Good first contributions include:</p>
+            <ul>
+              <li>Improving architecture documentation.</li>
+              <li>Adding tests or verification commands for the Qdrant demo.</li>
+              <li>Hardening security guidance.</li>
+              <li>Clarifying AI-agent rules.</li>
+              <li>Adding implementation modules that follow the documented architecture.</li>
+            </ul>
+
+            <h2>Development Workflow</h2>
+            <ul>
+              <li>Create a feature branch off of the default branch.</li>
+              <li>Make the smallest coherent change.</li>
+              <li>Update documentation when behavior, architecture, or commands change.</li>
+              <li>Run the relevant verification:
+                <ul>
+                  <li>Documentation-only changes: check links and headings manually.</li>
+                  <li>Qdrant demo changes: run <code>make test</code> in <code>qdrant-multi-node-cluster</code>.</li>
+                </ul>
+              </li>
+              <li>Open a pull request with a concise summary, verification results, and any known limitations.</li>
+            </ul>
+
+            <h2>Pull Request Standard</h2>
+            <p>Each pull request should include:</p>
+            <ul>
+              <li>What changed.</li>
+              <li>Why it changed.</li>
+              <li>How it was verified.</li>
+              <li>Any follow-up work or risk.</li>
+            </ul>
+
+            <h2>Style</h2>
+            <ul>
+              <li>Prefer clear prose over broad claims.</li>
+              <li>Keep architecture terms consistent.</li>
+              <li>Avoid examples that expose internal systems or private data.</li>
+              <li>Keep generated artifacts out of source control.</li>
+            </ul>
+          </div>
+
+          <!-- Tab 3: Security Policy (SECURITY.md) -->
+          <div class="docs-doc-content md-doc" id="doc-security">
+            <h1>Security Policy</h1>
+            
+            <h2>Supported Scope</h2>
+            <p>Security reports are accepted for:</p>
+            <ul>
+              <li>Repository documentation that could encourage unsafe deployment.</li>
+              <li>Qdrant demo configuration that exposes credentials or unsafe defaults.</li>
+              <li>Agent rules that could leak secrets, local sessions, logs, or private documents.</li>
+              <li>Future application code added under the documented architecture.</li>
+            </ul>
+
+            <h2>Reporting a Vulnerability</h2>
+            <div class="md-alert md-alert-important">
+              <p><strong>[IMPORTANT]</strong> Do not open a public issue for exploitable vulnerabilities or leaked secrets.</p>
+            </div>
+            <p>Send a private report to the maintainers (or open a GitHub Security Advisory on this repository) with:</p>
+            <ul>
+              <li>Affected file or component.</li>
+              <li>Reproduction steps.</li>
+              <li>Impact assessment.</li>
+              <li>Suggested mitigation, if available.</li>
+            </ul>
+            <p>If no private channel is published yet, create a public issue that only says you have a security report and need a maintainer contact. Do not include exploit details in that issue.</p>
+
+            <h2>Secret Handling</h2>
+            <p>Never commit:</p>
+            <ul>
+              <li>API keys, tokens, passwords, certificates, or private keys.</li>
+              <li>Internal URLs, customer identifiers, or production hostnames.</li>
+              <li>Raw documents, model weights, vector database snapshots, audit exports, or logs.</li>
+              <li>Local agent memory, sessions, or authentication files.</li>
+            </ul>
+            <p>Use <code>.env.example</code> to document configuration names without real values.</p>
+          </div>
+
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Footer -->
   <footer>
-    <a href="README.md">README</a>
-    <a href="AGENTS.md">Agent Guide</a>
-    <a href="SECURITY.md">Security</a>
-    <span>MIT licensed reference implementation.</span>
+    <div class="footer-content">
+      <div class="footer-links">
+        <button class="footer-link-btn" onclick="scrollToDocs('agent-guide')">Agent Guide</button>
+        <button class="footer-link-btn" onclick="scrollToDocs('contributing')">Contributing</button>
+        <button class="footer-link-btn" onclick="scrollToDocs('security')">Security</button>
+      </div>
+      <div class="copyright">&copy; 2026 Nexus-KB Project Contributors. Open-source under MIT License.</div>
+    </div>
   </footer>
 
+  <!-- Scripts -->
   <script>
-    const terminal = document.getElementById("terminal");
-    const views = {
-      ingest: [
-        '<span class="prompt">$</span> python -m nexus_document_parser.cli docs/vault --source-type obsidian',
-        'audit: INGEST_START, DOCUMENT_READ, CHUNK_GENERATED',
-        'chunks: markdown-aware section paths and metadata extracted',
-        'review: low-confidence candidates queued',
-        'vector: approved chunks upserted to Qdrant collection <span class="blue">nexus_chunks</span>',
-        '<span class="ok">ingestion completed</span>'
-      ],
-      search: [
-        '<span class="prompt">$</span> curl -X POST http://localhost:8000/api/v1/search',
-        '{ "query": "governed retrieval", "results": [',
-        '  { "score": 0.8924, "snippet": "...governed retrieval...",',
-        '    "graph_entities": [{ "name": "RBAC", "entity_type": "TERM" }],',
-        '    "graph_relationships": [{ "relationship_type": "USES" }] }',
-        '] }'
-      ],
-      graph: [
-        '<span class="prompt">$</span> curl -X POST http://localhost:8000/api/v1/graph/build?limit=100',
-        '{ "entities": [{ "name": "Qdrant", "confidence": 0.91 }],',
-        '  "relationships": [{ "relationship_type": "USES", "confidence": 0.88 }] }',
-        '<span class="prompt">$</span> curl http://localhost:8000/api/v1/graph/chunks/{chunk_id}',
-        '<span class="ok">chunk graph context returned</span>'
-      ],
-      mcp: [
-        '<span class="prompt">$</span> python -m nexus_confluence_bridge',
-        '{ "tool": "confluence.discover_sources",',
-        '  "arguments": { "actor": { "roles": ["SourceReader"], "allowed_spaces": ["KB"] } } }',
-        '<span class="ok">{ "ok": true, "result": [{ "source_type": "confluence" }] }</span>',
-        '<span class="warn">mutating confluence tools are disabled by default</span>'
-      ]
-    };
-
-    function switchTab(button, name) {
-      for (const item of button.parentElement.querySelectorAll(".tab")) {
-        item.classList.remove("active");
+    // Terminal switching
+    function switchTerminalTab(btn, tabId) {
+      const tabs = btn.parentNode.getElementsByClassName('terminal-tab');
+      for (let t of tabs) {
+        t.classList.remove('active');
       }
-      button.classList.add("active");
-      terminal.innerHTML = views[name].map(line => `<p class="line out">${line}</p>`).join("");
+      btn.classList.add('active');
+
+      const contentDiv = document.getElementById('terminal-content');
+      let html = '';
+
+      if (tabId === 'ingest') {
+        html = `
+          <div class="terminal-line"><span class="terminal-prompt">$</span>python -m nexus_document_parser.cli docs/vault/ --source-type obsidian</div>
+          <div class="terminal-line terminal-output">Initializing Ingestion Pipeline...</div>
+          <div class="terminal-line terminal-output">Connecting to PostgreSQL at localhost:5432... <span class="text-green">Success</span></div>
+          <div class="terminal-line terminal-output">Connecting to Qdrant at localhost:6333... <span class="text-green">Success</span></div>
+          <div class="terminal-line terminal-output">Loading vault files: 12 markdown documents discovered.</div>
+          <div class="terminal-line terminal-output">Extracting YAML Frontmatter & wikilinks...</div>
+          <div class="terminal-line terminal-output">Splitting into 84 chunks using Markdown-aware chunker.</div>
+          <div class="terminal-line terminal-output">Generating embeddings using <span class="text-violet">BAAI/bge-m3</span>...</div>
+          <div class="terminal-line terminal-output">Upserting vector points to collection 'nexus_chunks'...</div>
+          <div class="terminal-line terminal-output text-green">=== Ingestion Completed Successfully ===</div>
+          <div class="terminal-line terminal-output">{ "run_id": "8f2a1b9d-4e8c-4c4c-8b8a-9f5b2d8e4f5a", "documents_indexed": 12, "chunks_indexed": 84 }</div>
+        `;
+      } else if (tabId === 'search') {
+        html = `
+          <div class="terminal-line"><span class="terminal-prompt">$</span>curl -X POST "http://localhost:8000/api/v1/search" -H "Content-Type: application/json" -d '{ "query": "governed retrieval", "limit": 1 }'</div>
+          <div class="terminal-line terminal-output">{</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;"query": "governed retrieval",</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;"results": [</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;{</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"score": <span class="text-cyan">0.8924</span>,</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"chunk_id": "<span class="text-violet">3a1d9f82-5e4c-42b7-a681-ef02189d2c41</span>",</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"title": "Security & Permissions in RAG",</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"source_path": "docs/vault/security-guidelines.md",</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": "Governed retrieval ensures security filters join metadata records in SQL before vectors return to search engines...",</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"tags": ["security", "rag", "governance"]</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+          <div class="terminal-line terminal-output">&nbsp;&nbsp;]</div>
+          <div class="terminal-line terminal-output">}</div>
+        `;
+      } else if (tabId === 'migrations') {
+        html = `
+          <div class="terminal-line"><span class="terminal-prompt">$</span>alembic -c infrastructure/alembic.ini upgrade head</div>
+          <div class="terminal-line terminal-output">INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.</div>
+          <div class="terminal-line terminal-output">INFO  [alembic.runtime.migration] Will assume transactional DDL.</div>
+          <div class="terminal-line terminal-output">INFO  [alembic.runtime.migration] Running upgrade  -> 1f3c2b9a4d8c, init_phase1_schema</div>
+          <div class="terminal-line terminal-output text-green">INFO  [alembic.runtime.migration] Schema upgraded to head successfully.</div>
+        `;
+      }
+
+      contentDiv.innerHTML = html;
+    }
+
+    // Getting started OS switcher
+    function switchSetupTab(btn, os) {
+      const btns = btn.parentNode.getElementsByClassName('setup-tab-btn');
+      for (let b of btns) {
+        b.classList.remove('active');
+      }
+      btn.classList.add('active');
+
+      document.getElementById('setup-windows').classList.remove('active');
+      document.getElementById('setup-linux').classList.remove('active');
+
+      if (os === 'windows') {
+        document.getElementById('setup-windows').classList.add('active');
+      } else {
+        document.getElementById('setup-linux').classList.add('active');
+      }
+    }
+
+    // Copy to clipboard helper
+    function copyCode(btn) {
+      const codeSpan = btn.parentNode.querySelector('.code-text');
+      const text = codeSpan.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const icon = btn.querySelector('i');
+        icon.className = 'fas fa-check';
+        icon.style.color = '#10b981';
+        setTimeout(() => {
+          icon.className = 'far fa-copy';
+          icon.style.color = '';
+        }, 1500);
+      });
+    }
+
+    // Docs tab switcher
+    function switchDocTab(btn, tabId) {
+      const menuBtns = btn.parentNode.getElementsByClassName('docs-menu-btn');
+      for (let b of menuBtns) {
+        b.classList.remove('active');
+      }
+      btn.classList.add('active');
+
+      // Hide all panels
+      const contents = document.querySelectorAll('.docs-doc-content');
+      for (let c of contents) {
+        c.classList.remove('active');
+      }
+
+      // Show target panel
+      document.getElementById('doc-' + tabId).classList.add('active');
+    }
+
+    // Footer scroll link helper
+    function scrollToDocs(tabId) {
+      document.getElementById('docs').scrollIntoView({ behavior: 'smooth' });
+      const targetBtn = document.querySelector(`.docs-menu-btn[onclick*="${tabId}"]`);
+      if (targetBtn) {
+        switchDocTab(targetBtn, tabId);
+      }
     }
   </script>
 </body>
