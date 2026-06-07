@@ -9,6 +9,9 @@ for relative in [
     "packages/vector-client",
     "workers/document-parser",
     "services/nexus-api",
+    "mcp-servers/confluence-bridge",
+    "workers/graph-builder",
+    "services/llm-gateway",
 ]:
     path = str(ROOT / relative)
     if path not in sys.path:

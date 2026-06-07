@@ -7,7 +7,7 @@ from tests import _paths  # noqa: F401
 
 from nexus_api.search import SearchService, build_snippet, rerank_score
 from nexus_document_parser.embedding import DeterministicEmbeddingProvider
-from nexus_shared.contracts import SearchRequest, SourceType
+from nexus_shared.contracts import GraphBuildResult, GraphEntityRecord, GraphRelationshipRecord, SearchRequest, SourceType
 
 
 class FakeRepository:
@@ -26,6 +26,14 @@ class FakeVectorClient:
     def search(self, vector, limit=10, tags=None, source_type=None):
         self.received_tags = tags
         return self.results
+
+
+class FakeGraphRepository:
+    def __init__(self, graph_by_chunk) -> None:
+        self.graph_by_chunk = graph_by_chunk
+
+    def graph_for_chunk(self, chunk_id):
+        return self.graph_by_chunk.get(chunk_id, GraphBuildResult(entities=[], relationships=[]))
 
 
 class SearchServiceTest(unittest.TestCase):
@@ -77,6 +85,62 @@ class SearchServiceTest(unittest.TestCase):
         self.assertEqual(result.heading_path, ["Platform", "Retrieval"])
         self.assertEqual(result.section_title, "Retrieval")
         self.assertEqual(result.frontmatter["owner"], "platform")
+
+    def test_search_result_includes_graph_lookup_for_matched_chunk(self) -> None:
+        chunk_id = uuid4()
+        document_id = uuid4()
+        entity_id = uuid4()
+        target_id = uuid4()
+        row = {
+            "chunk_id": chunk_id,
+            "document_id": document_id,
+            "chunk_index": 0,
+            "content": "Nexus-KB uses Qdrant.",
+            "chunk_metadata": {},
+            "title": "Graph",
+            "source_path": "/vault/Graph.md",
+            "file_extension": ".md",
+            "mime_type": "text/markdown",
+            "source_type": "obsidian",
+            "tags": [],
+            "wikilinks": [],
+            "frontmatter": {},
+        }
+        graph = GraphBuildResult(
+            entities=[
+                GraphEntityRecord(
+                    id=entity_id,
+                    name="Nexus-KB",
+                    normalized_name="nexus-kb",
+                    entity_type="TERM",
+                    confidence=0.9,
+                    provenance={"chunk_id": str(chunk_id)},
+                )
+            ],
+            relationships=[
+                GraphRelationshipRecord(
+                    id=uuid4(),
+                    source_entity_id=entity_id,
+                    target_entity_id=target_id,
+                    relationship_type="USES",
+                    confidence=0.88,
+                    provenance={"chunk_id": str(chunk_id)},
+                )
+            ],
+        )
+        vector_client = FakeVectorClient([{"id": str(chunk_id), "score": 0.91, "payload": {"chunk_id": str(chunk_id)}}])
+        service = SearchService(
+            repository=FakeRepository({chunk_id: row}),
+            vector_client=vector_client,
+            embedding_provider=DeterministicEmbeddingProvider(dimension=8),
+            graph_repository=FakeGraphRepository({chunk_id: graph}),
+        )
+
+        response = service.search(SearchRequest(query="qdrant"))
+
+        self.assertEqual(len(response.results), 1)
+        self.assertEqual(response.results[0].graph_entities[0].normalized_name, "nexus-kb")
+        self.assertEqual(response.results[0].graph_relationships[0].relationship_type, "USES")
 
     def test_search_reranks_lexically_relevant_lower_vector_result(self) -> None:
         first_chunk = uuid4()

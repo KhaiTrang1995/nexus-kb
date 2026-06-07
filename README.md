@@ -1,10 +1,10 @@
 # Nexus-KB
 
-### Enterprise RAG and Knowledge Graph Engine with Governed AI Workflows 🚀
+Enterprise RAG and Knowledge Graph Engine with governed AI workflows.
 
-Nexus-KB is an open-source reference architecture for building a production-grade enterprise Retrieval-Augmented Generation (RAG) and Knowledge Graph (KG) engine. It integrates Model Context Protocol (MCP) connectors, governed AI agent workflows, and high-availability vector search to provide a secure and auditable knowledge retrieval platform.
+Nexus-KB is an open-source reference architecture for building a secure Retrieval-Augmented Generation (RAG) and Knowledge Graph (KG) platform. It combines local and Obsidian ingestion, PostgreSQL metadata and audit storage, Qdrant vector search, MCP source connector boundaries, review workflows, graph construction, and an LLM Gateway slice.
 
-The workspace is structured to separate local development setups, runtime storage, and private configuration from source control. It currently contains a documentation-first design, a runnable 3-node Qdrant cluster demo, and the Phase 1 MVP python implementation.
+The repository is still a reference implementation, not a production-ready enterprise stack. All examples and tests use synthetic data.
 
 ![Python](https://img.shields.io/badge/Python-%3E%3D3.10-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
@@ -15,274 +15,220 @@ The workspace is structured to separate local development setups, runtime storag
 ![Pytest](https://img.shields.io/badge/Pytest-8.3-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
 ![MIT License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-> [!TIP]
-> See also: [README-VN.md](./README-VN.md) (Phiên bản tiếng Việt) and [README-CN.md](./README-CN.md) (中文版本) for localized documentation.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [System Architecture](#system-architecture)
-- [Project Layout](#project-layout)
-- [Configuration](#configuration)
-- [Quick Start](#quick-start)
-  - [1. Prerequisites](#1-prerequisites)
-  - [2. Virtual Environment Setup](#2-virtual-environment-setup)
-  - [3. Run Infrastructure Services](#3-run-infrastructure-services)
-  - [4. Apply Database Migrations](#4-apply-database-migrations)
-  - [5. Run the API Server](#5-run-the-api-server)
-  - [6. Ingest Documents via CLI](#6-ingest-documents-via-cli)
-  - [7. Query the Search API](#7-query-the-search-api)
-- [Verification & Testing](#verification--testing)
-  - [Unit Tests (Offline)](#unit-tests-offline)
-  - [Integration Tests (Live Docker Services)](#integration-tests-live-docker-services)
-- [Roadmap](#roadmap)
-- [Contributing & Security](#contributing--security)
-- [License](#license)
-
----
+See also [README-VN.md](./README-VN.md) and [README-CN.md](./README-CN.md) for localized documentation.
 
 ## Overview
 
-Nexus-KB addresses the challenge of making fragmented enterprise documents (such as Confluence, markdown files, and local documentation vaults) safely searchable and queryable. It emphasizes **governed retrieval**—ensuring AI agents and search responses inherit actual user access permissions and security constraints, while keeping all access auditable.
+Nexus-KB addresses fragmented enterprise knowledge by making documents searchable, reviewable, auditable, and graph-aware. The current codebase implements a local MVP path:
+
+- Parse local and Obsidian markdown documents.
+- Extract frontmatter, tags, wikilinks, section paths, and mime/file metadata.
+- Chunk, embed, and index approved content in Qdrant.
+- Store documents, chunks, ingestion runs, audit logs, review items, and graph records in PostgreSQL.
+- Search with vector retrieval, metadata filters, lexical reranking, snippets, and optional graph context.
+- Route low-confidence chunks through a human review queue.
+- Expose a Confluence-oriented MCP connector scaffold.
+- Build relational Knowledge Graph entities and relationships from approved chunks.
+- Test an LLM Gateway slice with routing, caching, retry, telemetry, and provider abstraction.
+
+## Architecture
 
 ```mermaid
 flowchart TD
-    %% Ingestion Flow
-    SubGraph_Ingest[Ingestion Pipeline]
-    Doc[Source Folder / Obsidian Vault] -->|Ingest CLI / API| Pipe[Ingestion Pipeline]
-    Pipe -->|Parse Frontmatter, Tags & Links| MetaExtractor[Metadata Extractor]
-    Pipe -->|Chunk & Embed BAAI/bge-m3| Embedder[Embedding Provider]
-    
-    MetaExtractor -->|Insert Records| DB[(PostgreSQL)]
-    Embedder -->|Upsert Vectors + Payload| Qdrant[(Qdrant Vector DB)]
-    
-    %% Search Flow
-    SubGraph_Search[Search Service]
-    UserQuery[Search Query] -->|API Request| SearchAPI[Search REST Endpoint]
-    SearchAPI -->|Generate Query Vector| Embedder
-    SearchAPI -->|Retrieve Vector Matches| Qdrant
-    Qdrant -->|Get Chunk IDs| Joiner[Hybrid Result Merger]
-    Joiner -->|Join Metadata & Access Filters| DB
-    DB -->|Return Audited Chunks| Output[Reranked Search Response]
+    Source[Local files / Obsidian / MCP source] --> Parser[Document Parser Worker]
+    Parser --> Review{Review policy}
+    Review -->|Approved / direct commit| Metadata[(PostgreSQL)]
+    Review -->|Approved / direct commit| Vector[(Qdrant)]
+    Review -->|Low confidence| Queue[Review Queue]
+    Queue -->|Approve / modify| Metadata
+    Queue -->|Approve / modify| Vector
+    Metadata --> Graph[Graph Builder Worker]
+    Graph --> GraphTables[(Relational graph tables)]
+    API[FastAPI] --> Metadata
+    API --> Vector
+    API --> GraphTables
+    API --> Audit[(Audit logs)]
 ```
 
----
+The source-of-truth architecture document is [docs/architecture.md](docs/architecture.md). The roadmap is [docs/action.md](docs/action.md).
 
-## Key Features
+## Features
 
-- **Obsidian & Markdown Intelligence:** Automatically extracts YAML frontmatter, wiki-style links (`[[WikiLink]]`), tags, file extensions, and mime-type attributes during parsing.
-- **Structured Metadata & Vector Coexistence:** Relational PostgreSQL is used to store document metadata, chunk records, and ingestion logs; Qdrant stores chunk vectors and metadata payloads.
-- **Markdown-Aware Chunking:** Intelligently splits markdown documents while preserving section headers, heading paths, and token boundaries.
-- **Hybrid Search Reranking:** Computes a hybrid score by ranking vectors and incorporating lexical overlap, section titles, and tags matching to produce precise search responses.
-- **Strict Repository Boundaries:** Agent operating guidelines ([AGENTS.md](AGENTS.md)) and `.gitignore` exclude secrets, logs, raw data, model weights, and local configurations.
-
----
-
-## System Architecture
-
-The target Nexus-KB architecture operates across five layers:
-
-```mermaid
-graph TD
-    User[Users & Reviewers] -->|HTTPS| WebConsole[Web & Review UI]
-    WebConsole -->|REST / API| Gateway[API Gateway / Auth Service]
-    Gateway -->|RBAC & Rules| Workflow[Workflow & Rule Engine]
-    Workflow -->|Jobs Queue| Workers[Document Parser & Graph Workers]
-    Workers -->|Model Access| LLM[LLM Gateway / Local Models]
-    Workers -->|Metadata & Vector storage| Relational[(PostgreSQL)]
-    Workers -->|High-Availability Vectors| VectorDB[(Qdrant HA Cluster)]
-    Workers -->|Entity Graphs| GraphDB[(Neo4j / Graph Store)]
-```
-
-For a detailed roadmap of how these components are planned, see [docs/action.md](docs/action.md). For source-of-truth technical details, see [docs/architecture.md](docs/architecture.md).
-
----
+- **Ingestion MVP:** Local and Obsidian markdown ingestion, frontmatter/tag/wikilink extraction, markdown-aware chunking, deterministic test embeddings, and runtime sentence-transformer embeddings.
+- **Hybrid Retrieval:** Qdrant vector search with PostgreSQL metadata joins, tag/source filters, lexical reranking, snippets, and graph context fields.
+- **Audit and Review:** Immutable audit events for ingestion, document reads, chunk generation, search, and review actions. Review queue supports approve, reject, and modify flows with mock reviewer RBAC.
+- **MCP Source Connector:** `mcp-servers/confluence-bridge` provides source discovery and document read tools with user-context authorization, disabled mutating tools, structured errors, and redaction.
+- **Knowledge Graph Builder:** `workers/graph-builder` extracts entities and relationships from approved chunks, merges duplicates, stores confidence/provenance, and supports chunk-level graph lookup.
+- **LLM Gateway Slice:** `services/llm-gateway` centralizes routing, prompt categories, caching, retry, telemetry, and provider abstraction for future model use.
+- **Repository Safety:** `.gitignore`, [AGENTS.md](AGENTS.md), and `.rules` keep secrets, logs, raw data, sessions, model files, vector snapshots, and local runtime state out of git.
 
 ## Project Layout
 
 ```text
 nexus-kb/
-├── .agents/                          # Shared local agent skills
-├── .claude/                          # Claude Code project configuration
-├── .codex/                           # Codex project configuration
-├── .hermes/                          # Local Hermes runtime configuration
-├── .rules                            # Experience Engine API guide for coding agents
-├── docs/                             # Project documentation
-│   ├── action.md                     # Roadmap and execution strategy
-│   ├── architecture.md               # Architecture details (Source-of-Truth)
-│   ├── phase1-mvp.md                 # Current Phase 1 implementation scope
-│   ├── architect.md                  # Legacy redirect pointer
-│   └── new.md                        # Legacy redirect pointer
-├── infrastructure/                   # DB migrations and initial setup
-│   ├── alembic/                      # Alembic schema migrations script
-│   ├── migrations/                   # SQL init schema scripts
-│   └── alembic.ini                   # Alembic configuration
-├── packages/                         # Shared libraries
-│   ├── shared-contracts/             # Shared Pydantic data schemas
-│   └── vector-client/                # Qdrant client utility wrappers
-├── qdrant-multi-node-cluster/        # 3-node HA Qdrant cluster Docker setup
-├── services/                         # Backend services
-│   └── nexus-api/                    # FastAPI web server and search engine
-├── workers/                          # Async pipeline tasks
-│   └── document-parser/              # Local file parsing and vector ingest
-├── tests/                            # Unit and live integration test suites
-├── requirements.txt                  # Python dependency specifications
-├── pytest.ini                        # Pytest config setting path targets
-├── docker-compose.yml                # Local docker compose (Postgres + Qdrant)
-└── AGENTS.md                         # Rules governing AI assistants
+|-- docs/                            # Architecture, roadmap, and phase plans
+|-- infrastructure/
+|   |-- alembic/                     # Alembic migration environment
+|   |-- migrations/                  # SQL init scripts for local containers
+|   `-- alembic.ini
+|-- mcp-servers/
+|   `-- confluence-bridge/           # Phase 3 MCP source connector scaffold
+|-- packages/
+|   |-- shared-contracts/            # Shared Pydantic schemas
+|   `-- vector-client/               # Qdrant client wrapper
+|-- qdrant-multi-node-cluster/       # 3-node HA Qdrant demo
+|-- services/
+|   |-- llm-gateway/                 # Phase 5 gateway slice
+|   `-- nexus-api/                   # FastAPI ingest/search/audit/review/graph API
+|-- workers/
+|   |-- document-parser/             # Parsing, chunking, embedding, ingest
+|   `-- graph-builder/               # Entity and relationship builder
+|-- tests/                           # Offline and live tests
+|-- docker-compose.yml               # Local Postgres + Qdrant
+|-- requirements.txt
+|-- pytest.ini
+`-- AGENTS.md
 ```
-
----
 
 ## Configuration
 
-The application is configured using environment variables. An example template is located in [.env.example](.env.example). Create a `.env` file in the root directory before running commands.
+Create `.env` from [.env.example](.env.example) when running local services.
 
-| Environment Variable | Default Value | Description |
+| Variable | Default | Description |
 |---|---|---|
-| `POSTGRES_HOST` | `localhost` | PostgreSQL database hostname |
-| `POSTGRES_PORT` | `5432` | PostgreSQL database port |
-| `POSTGRES_DB` | `nexus_kb` | PostgreSQL database name |
-| `POSTGRES_USER` | `nexus` | PostgreSQL owner username |
-| `POSTGRES_PASSWORD` | `change-me` | PostgreSQL owner password |
-| `POSTGRES_DSN` | `postgresql+psycopg://nexus:change-me@localhost:5432/nexus_kb` | Database connection DSN (prefer psycopg driver) |
-| `QDRANT_HOST` | `localhost` | Qdrant host interface endpoint |
-| `QDRANT_HTTP_PORT` | `6333` | Qdrant REST API port |
-| `QDRANT_GRPC_PORT` | `6334` | Qdrant gRPC API port |
-| `QDRANT_COLLECTION` | `nexus_chunks` | Destination collection name for vector shards |
-| `NEXUS_EMBEDDING_MODEL` | `BAAI/bge-m3` | Embedding model HuggingFace path or local folder |
-| `NEXUS_EMBEDDING_DIMENSION`| `1024` | Embedding vector output dimension |
-| `NEXUS_KB_RUN_LIVE_TESTS` | `0` | Flag to execute integration tests on live containers (`0` or `1`) |
-
----
+| `POSTGRES_HOST` | `localhost` | PostgreSQL host |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| `POSTGRES_DB` | `nexus_kb` | Database name |
+| `POSTGRES_USER` | `nexus` | Database user |
+| `POSTGRES_PASSWORD` | `change-me` | Database password |
+| `POSTGRES_DSN` | `postgresql+psycopg://nexus:change-me@localhost:5432/nexus_kb` | SQLAlchemy DSN |
+| `QDRANT_HOST` | `localhost` | Qdrant host |
+| `QDRANT_HTTP_PORT` | `6333` | Qdrant HTTP port |
+| `QDRANT_GRPC_PORT` | `6334` | Qdrant gRPC port |
+| `QDRANT_COLLECTION` | `nexus_chunks` | Vector collection |
+| `NEXUS_EMBEDDING_MODEL` | `BAAI/bge-m3` | Runtime embedding model |
+| `NEXUS_EMBEDDING_DIMENSION` | `1024` | Embedding dimension |
+| `NEXUS_KB_RUN_LIVE_TESTS` | `0` | Enables live Docker-backed tests |
 
 ## Quick Start
 
-### 1. Prerequisites
-
-- Python 3.10 or higher installed.
-- Docker and Docker Compose installed.
-
-### 2. Virtual Environment Setup
-
-Initialize a Python virtual environment and install dependencies:
+### 1. Install dependencies
 
 ```powershell
 python -m venv .venv
-# On Windows PowerShell:
 .venv\Scripts\Activate.ps1
-# On Linux/macOS:
-# source .venv/bin/activate
-
 pip install -r requirements.txt
 ```
 
-### 3. Run Infrastructure Services
+Linux/macOS:
 
-Start the localized PostgreSQL database and Qdrant vector store in the background:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Start local storage
 
 ```bash
 docker compose up -d
 ```
 
-### 4. Apply Database Migrations
-
-Bring the database schema up-to-date using Alembic:
+### 3. Apply migrations
 
 ```powershell
 alembic -c infrastructure/alembic.ini upgrade head
 ```
 
-### 5. Run the API Server
-
-Configure the `PYTHONPATH` context and run the FastAPI server using Uvicorn:
+If your Compose database was initialized from SQL scripts before Alembic versioning existed, stamp Phase 1 first:
 
 ```powershell
-# On Windows PowerShell:
-$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;services/nexus-api"
-uvicorn nexus_api.main:app --reload
-
-# On Linux/macOS:
-# export PYTHONPATH="packages/shared-contracts:packages/vector-client:workers/document-parser:services/nexus-api"
-# uvicorn nexus_api.main:app --reload
+alembic -c infrastructure/alembic.ini stamp 001_phase1_schema
+alembic -c infrastructure/alembic.ini upgrade head
 ```
 
-The API will now be running on `http://127.0.0.1:8000`. You can inspect the interactive OpenAPI documentation at `/docs`.
+### 4. Run the API
 
-### 6. Ingest Documents via CLI
-
-Use the ingestion worker CLI tool to parse local file folders or Obsidian vaults:
+PowerShell:
 
 ```powershell
-# Set PYTHONPATH
-$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;services/nexus-api"
+$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api"
+uvicorn nexus_api.main:app --reload
+```
 
-# Ingest an Obsidian vault directory
+Linux/macOS:
+
+```bash
+export PYTHONPATH="packages/shared-contracts:packages/vector-client:workers/document-parser:workers/graph-builder:services/nexus-api"
+uvicorn nexus_api.main:app --reload
+```
+
+Open `http://127.0.0.1:8000/docs`.
+
+### 5. Ingest documents
+
+```powershell
+$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api"
 python -m nexus_document_parser.cli path\to\vault --source-type obsidian
 ```
 
-### 7. Query the Search API
-
-Search ingested chunks via REST endpoints:
+### 6. Search
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/search" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "query": "governed retrieval",
-       "limit": 5,
-       "tags": ["rag"]
-     }'
+  -H "Content-Type: application/json" \
+  -d '{"query":"governed retrieval","limit":5,"tags":["rag"]}'
 ```
 
----
+### 7. Audit, review, and graph
 
-## Verification & Testing
+```bash
+curl "http://127.0.0.1:8000/api/v1/audit?limit=20"
 
-### Unit Tests (Offline)
+curl "http://127.0.0.1:8000/api/v1/review/queue" \
+  -H "X-User-Role: Reviewer"
 
-Run the synthetic unit tests that execute completely offline and do not require Docker containers:
+curl -X POST "http://127.0.0.1:8000/api/v1/graph/build?limit=100"
+```
+
+### 8. MCP connector runner
+
+```powershell
+$env:PYTHONPATH="mcp-servers/confluence-bridge"
+'{"tool":"confluence.discover_sources","arguments":{"actor":{"user_id":"alice","roles":["SourceReader"],"allowed_spaces":["KB"],"correlation_id":"demo"},"space_key":"KB"}}' | python -m nexus_confluence_bridge
+```
+
+## Verification
+
+Offline tests:
 
 ```bash
 python -m pytest -q
 ```
 
-### Integration Tests (Live Docker Services)
-
-To run tests against actual Postgres and Qdrant docker containers:
-
-1. Ensure services are running: `docker compose up -d`.
-2. Run migration scripts: `alembic -c infrastructure/alembic.ini upgrade head`.
-3. Execute integration tests:
+Live tests with Docker services:
 
 ```powershell
-# Windows PowerShell
 $env:NEXUS_KB_RUN_LIVE_TESTS="1"
-python -m pytest tests/test_live_integration_scaffold.py -q
+$env:POSTGRES_DSN="postgresql://nexus:nexus_dev_password@localhost:5432/nexus_kb"
+python -m pytest tests/test_live_integration_scaffold.py tests/test_live_graph_repository.py -q
 ```
 
----
+## Roadmap Status
 
-## Roadmap
+- **Phase 0:** Documentation, architecture source-of-truth, agent rules, and repository safety baseline.
+- **Phase 1 / 1.5:** Local and Obsidian ingestion, PostgreSQL metadata, Qdrant vectors, markdown-aware chunking, hybrid reranking, snippets, and tests.
+- **Phase 2:** Audit logs, review queue, review actions, mock reviewer RBAC, and audit/review APIs.
+- **Phase 3:** Confluence-oriented MCP source connector scaffold with source discovery, document read, user-context authorization, disabled mutating tools, and redacted errors.
+- **Phase 4:** Knowledge Graph builder with entity extraction, duplicate merge, relationship confidence/provenance, relational graph tables, graph APIs, and search result graph context.
+- **Phase 5:** LLM Gateway slice with routing, prompt category tracking, caching, retry, telemetry, and provider abstraction.
 
-- **Phase 1 (Current):** Basic Python local markdown/Obsidian ingestion, PostgreSQL metadata logging, Qdrant client wrapper, FastAPI API layer, and test coverage.
-- **Phase 1.5:** Advanced metadata injection, markdown section path tracking, lexical-vector hybrid reranker scoring.
-- **Phase 2:** Graph Entity extractor engine, Neo4j relationship builder pipeline, core RBAC filters.
-- **Phase 3:** Front-end React Web UI Dashboard console, search result explorer, and audit review workspace.
+Future work remains for production authentication, a full web console, production API gateway, real enterprise connector adapters, deployment hardening, and observability.
 
----
+## Contributing and Security
 
-## Contributing & Security
-
-Contributions are highly encouraged! Please review [CONTRIBUTING.md](CONTRIBUTING.md) to understand the workflow, and read [AGENTS.md](AGENTS.md) if you are pair-programming with AI agents.
-
-Security issues should not be reported via public GitHub issues. Please follow the instructions in [SECURITY.md](SECURITY.md) to submit private reports.
-
----
+Read [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [AGENTS.md](AGENTS.md) before contributing. Do not commit credentials, internal hostnames, customer data, logs, local sessions, model files, vector snapshots, or audit exports.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for the full text.
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

@@ -14,10 +14,11 @@ class LiveIntegrationScaffoldTest(unittest.TestCase):
         from qdrant_client import QdrantClient
 
         postgres_dsn = os.getenv("POSTGRES_DSN", "postgresql://nexus:change-me@localhost:5432/nexus_kb")
+        psycopg_dsn = postgres_dsn.replace("+psycopg", "")
         qdrant_host = os.getenv("QDRANT_HOST", "localhost")
         qdrant_port = int(os.getenv("QDRANT_HTTP_PORT", "6333"))
 
-        with psycopg.connect(postgres_dsn) as connection:
+        with psycopg.connect(psycopg_dsn) as connection:
             value = connection.execute("SELECT 1").fetchone()[0]
         collections = QdrantClient(host=qdrant_host, port=qdrant_port).get_collections()
 
@@ -37,13 +38,14 @@ class LiveIntegrationScaffoldTest(unittest.TestCase):
         from nexus_vector.client import NexusVectorClient
 
         postgres_dsn = os.getenv("POSTGRES_DSN", "postgresql://nexus:change-me@localhost:5432/nexus_kb")
+        psycopg_dsn = postgres_dsn.replace("+psycopg", "")
         qdrant_host = os.getenv("QDRANT_HOST", "localhost")
         qdrant_port = int(os.getenv("QDRANT_HTTP_PORT", "6333"))
         collection_name = "nexus_chunks_live_test"
         fixture = (Path(__file__).parent / "fixtures" / "pipeline").resolve()
         source_path = str((fixture / "Note.md").resolve())
 
-        with psycopg.connect(postgres_dsn) as connection:
+        with psycopg.connect(psycopg_dsn) as connection:
             connection.execute("DELETE FROM documents WHERE source_path = %s", (source_path,))
             connection.commit()
 
