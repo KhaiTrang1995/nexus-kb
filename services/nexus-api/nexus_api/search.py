@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
-from nexus_shared.contracts import SearchRequest, SearchResponse, SearchResult, SourceType
+from nexus_shared.contracts import AuditStatus, GraphBuildResult, SearchRequest, SearchResponse, SearchResult, SourceType
 from nexus_document_parser.embedding import EmbeddingProvider
 from nexus_document_parser.repository import PostgresMetadataRepository
 from nexus_vector.client import NexusVectorClient
@@ -15,12 +15,21 @@ class SearchService:
         repository: PostgresMetadataRepository,
         vector_client: NexusVectorClient,
         embedding_provider: EmbeddingProvider,
+        graph_repository=None,
     ) -> None:
         self.repository = repository
         self.vector_client = vector_client
         self.embedding_provider = embedding_provider
+        self.graph_repository = graph_repository
 
     def search(self, request: SearchRequest) -> SearchResponse:
+        if hasattr(self.repository, "record_audit_log"):
+            self.repository.record_audit_log(
+                actor_id="system:search",
+                action="SEARCH_QUERY",
+                status=AuditStatus.SUCCESS,
+                details={"query": request.query, "limit": request.limit, "tags": request.tags},
+            )
         query_vector = self.embedding_provider.embed([request.query])[0]
         vector_limit = min(max(request.limit * 3, request.limit), 50)
         vector_results = self.vector_client.search(
@@ -37,6 +46,7 @@ class SearchService:
             if row is None:
                 continue
             metadata = dict(row.get("chunk_metadata") or {})
+            graph = self._graph_for_chunk(row["chunk_id"])
             vector_score = float(item["score"])
             rank_score = rerank_score(
                 query=request.query,
@@ -67,10 +77,17 @@ class SearchService:
                     tags=list(row["tags"] or []),
                     wikilinks=list(row["wikilinks"] or []),
                     frontmatter=dict(row["frontmatter"] or {}),
+                    graph_entities=graph.entities,
+                    graph_relationships=graph.relationships,
                 )
             )
         results.sort(key=lambda result: result.rank_score, reverse=True)
         return SearchResponse(query=request.query, results=results[: request.limit])
+
+    def _graph_for_chunk(self, chunk_id: UUID) -> GraphBuildResult:
+        if self.graph_repository is None or not hasattr(self.graph_repository, "graph_for_chunk"):
+            return GraphBuildResult(entities=[], relationships=[])
+        return self.graph_repository.graph_for_chunk(chunk_id)
 
 
 def query_terms(query: str) -> list[str]:
