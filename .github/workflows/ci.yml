@@ -40,7 +40,7 @@ jobs:
           # Check imports and potential errors (non-blocking for existing codebase)
           ruff check . --exit-zero
           # Check formatting guidelines (non-blocking for existing codebase)
-          ruff format --check . --exit-zero
+          ruff format --check . || true
 
   # ────────────────────────────────────────────────────────────────
   #  🐳 Validate Docker Configurations

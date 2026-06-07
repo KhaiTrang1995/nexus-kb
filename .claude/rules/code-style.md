@@ -31,3 +31,9 @@
 
 - Explain why a non-obvious decision exists.
 - Avoid comments that restate code.
+
+## Repository Health and Cleanliness
+
+- **Temporary Files:** Ensure no empty temporary directories (e.g., `tmp*`, `pytest-cache*`) are left or committed. If generated during execution, clean them up or ensure they are excluded by `.gitignore`.
+- **Environment Templates:** Always document newly introduced environment variables in `.env.example` with clear comments, type annotations, and default recommendations. Do not commit `.env` containing secrets.
+- **Git Hygiene:** Maintain clean separation of concerns. Do not duplicate or fragment governance files (e.g., `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CONTRIBUTING.md`) in both root and `.github` folders. Maintain them in the root directory.

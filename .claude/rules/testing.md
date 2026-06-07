@@ -34,3 +34,31 @@ Alternative:
 cd qdrant-multi-node-cluster
 python -m unittest discover -s tests
 ```
+
+## Root Project Tests
+
+Run synthetic unit tests offline:
+
+```bash
+python -m pytest -q
+```
+
+Run integration tests against live Docker services (PostgreSQL and Qdrant):
+
+1. Spin up compose resources:
+   ```bash
+   docker compose up -d
+   ```
+2. Apply migrations:
+   ```bash
+   alembic -c infrastructure/alembic.ini upgrade head
+   ```
+3. Run with integration flag:
+   ```bash
+   # Windows PowerShell:
+   $env:NEXUS_KB_RUN_LIVE_TESTS="1"
+   python -m pytest tests/test_live_integration_scaffold.py -q
+
+   # Linux/macOS:
+   NEXUS_KB_RUN_LIVE_TESTS=1 python -m pytest tests/test_live_integration_scaffold.py -q
+   ```
