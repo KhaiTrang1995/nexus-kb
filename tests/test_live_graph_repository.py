@@ -16,7 +16,8 @@ class LiveGraphRepositoryTest(unittest.TestCase):
         from nexus_shared.contracts import GraphChunkInput
 
         postgres_dsn = os.getenv("POSTGRES_DSN", "postgresql://nexus:change-me@localhost:5432/nexus_kb")
-        with psycopg.connect(postgres_dsn) as connection:
+        psycopg_dsn = postgres_dsn.replace("+psycopg", "")
+        with psycopg.connect(psycopg_dsn) as connection:
             connection.execute("DELETE FROM graph_relationships")
             connection.execute("DELETE FROM graph_entities")
             connection.commit()
@@ -56,12 +57,13 @@ class LiveGraphRepositoryTest(unittest.TestCase):
         from nexus_document_parser.sqlalchemy_repository import SQLAlchemyMetadataRepository
 
         postgres_dsn = os.getenv("POSTGRES_DSN", "postgresql://nexus:change-me@localhost:5432/nexus_kb")
+        psycopg_dsn = postgres_dsn.replace("+psycopg", "")
         direct_document = uuid4()
         direct_chunk = uuid4()
         pending_document = uuid4()
         pending_chunk = uuid4()
         run_id = uuid4()
-        with psycopg.connect(postgres_dsn) as connection:
+        with psycopg.connect(psycopg_dsn) as connection:
             connection.execute("DELETE FROM review_items")
             connection.execute("DELETE FROM chunks")
             connection.execute("DELETE FROM documents")
