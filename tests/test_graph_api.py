@@ -41,7 +41,8 @@ class GraphApiTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(len(payload["entities"]), 2)
+        # 2 from metadata (Nexus-KB, Qdrant) + 1 DOCUMENT for the source doc (new document linking feature)
+        self.assertEqual(len(payload["entities"]), 3)
         self.assertEqual(payload["relationships"][0]["relationship_type"], "USES")
 
     def test_graph_for_chunk_endpoint_returns_context(self) -> None:

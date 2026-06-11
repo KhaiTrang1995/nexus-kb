@@ -62,6 +62,10 @@ class FakeRepository:
         self.chunks_replaced += len(chunks)
         return [(uuid4(), chunk) for chunk in chunks]
 
+    def record_audit_log(self, actor_id, action, status, resource_id=None, details=None):
+        # Minimal stub; audit behavior covered in dedicated audit trail tests.
+        pass
+
 
 class FakeVectorClient:
     def __init__(self) -> None:

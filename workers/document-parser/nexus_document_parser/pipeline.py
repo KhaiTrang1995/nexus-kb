@@ -99,7 +99,7 @@ class IngestionPipeline:
                         heading_path=list(chunk.metadata.get("heading_path") or []),
                         section_title=chunk.metadata.get("section_title"),
                     )
-                    if confidence < self.confidence_threshold and hasattr(self.repository, "create_review_item"):
+                    if confidence < self.confidence_threshold:
                         self.repository.create_review_item(
                             run_id=run.id,
                             source_path=document.source_path,
@@ -162,8 +162,6 @@ class IngestionPipeline:
             )
 
     def _record_audit(self, action: str, status: AuditStatus, resource_id: UUID, details: dict) -> None:
-        if not hasattr(self.repository, "record_audit_log"):
-            return
         self.repository.record_audit_log(
             actor_id=self.actor_id,
             action=action,

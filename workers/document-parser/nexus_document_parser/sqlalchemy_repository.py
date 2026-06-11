@@ -185,8 +185,11 @@ class SQLAlchemyMetadataRepository:
                         c.id AS chunk_id,
                         c.document_id,
                         c.content,
-                        c.metadata AS chunk_metadata
+                        c.metadata AS chunk_metadata,
+                        d.wikilinks AS document_wikilinks,
+                        d.title AS document_title
                     FROM chunks c
+                    JOIN documents d ON d.id = c.document_id
                     WHERE NOT EXISTS (
                         SELECT 1
                         FROM review_items ri
@@ -202,6 +205,10 @@ class SQLAlchemyMetadataRepository:
             chunks: list[GraphChunkInput] = []
             for row in rows:
                 metadata = dict(row["chunk_metadata"] or {})
+                # Ensure title in metadata for downstream (graph linking source name)
+                if "title" not in metadata and row.get("document_title"):
+                    metadata["title"] = row["document_title"]
+                wikilinks = list(row.get("document_wikilinks") or [])
                 chunks.append(
                     GraphChunkInput(
                         chunk_id=row["chunk_id"],
@@ -209,6 +216,7 @@ class SQLAlchemyMetadataRepository:
                         content=row["content"],
                         metadata=metadata,
                         confidence=float(metadata.get("confidence", 1.0)),
+                        wikilinks=wikilinks,
                     )
                 )
             return chunks
