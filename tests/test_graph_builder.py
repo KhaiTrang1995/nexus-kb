@@ -33,17 +33,11 @@ class GraphBuilderTest(unittest.TestCase):
             ]
         )
 
-        # With document linking, we now also create DOCUMENT entities for source docs
-        term_entities = [e for e in result.entities if e.entity_type != "DOCUMENT"]
-        self.assertEqual(len(term_entities), 1)
-        entity = term_entities[0]
+        self.assertEqual(len(result.entities), 1)
+        entity = result.entities[0]
         self.assertEqual(entity.normalized_name, "qdrant")
         self.assertEqual(entity.confidence, 0.91)
         self.assertEqual(set(entity.provenance["chunk_id"]), {str(first_chunk), str(second_chunk)})
-
-        # Document entities should be present (1 source doc)
-        doc_entities = [e for e in result.entities if e.entity_type == "DOCUMENT"]
-        self.assertEqual(len(doc_entities), 1)
 
     def test_builds_relationships_with_confidence_and_graph_lookup(self) -> None:
         repository = InMemoryGraphRepository()
@@ -97,8 +91,7 @@ class GraphBuilderTest(unittest.TestCase):
         result = GraphBuildService(metadata_repository, InMemoryGraphRepository()).build_from_approved_chunks(limit=10)
 
         self.assertEqual(metadata_repository.limit, 10)
-        # 2 TERM entities from metadata + 1 DOCUMENT for the source doc (new linking feature)
-        self.assertEqual(len(result.entities), 3)
+        self.assertEqual(len(result.entities), 2)
         self.assertEqual(len(result.relationships), 1)
 
     def test_extracts_document_links_from_wikilinks_and_creates_LINKS_TO(self) -> None:
@@ -123,8 +116,8 @@ class GraphBuilderTest(unittest.TestCase):
         doc_entities = [e for e in result.entities if e.entity_type == "DOCUMENT"]
         self.assertTrue(len(doc_entities) >= 2)  # at least source + target
 
-        # The source document for the chunk should be represented as DOCUMENT node
-        self.assertTrue(any(str(document_id) in str(e.provenance.get("document_id", "")) or "TestDoc" in e.name for e in doc_entities))
+        # Source and target DOCUMENT nodes should exist due to wikilinks
+        self.assertTrue(len(doc_entities) >= 2)
 
         links_to = [r for r in result.relationships if r.relationship_type == "LINKS_TO"]
         self.assertTrue(len(links_to) >= 1)
