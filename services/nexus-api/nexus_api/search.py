@@ -5,14 +5,14 @@ from uuid import UUID
 
 from nexus_shared.contracts import AuditStatus, GraphBuildResult, SearchRequest, SearchResponse, SearchResult, SourceType
 from nexus_document_parser.embedding import EmbeddingProvider
-from nexus_document_parser.repository import PostgresMetadataRepository
+from nexus_document_parser.ports import MetadataRepository
 from nexus_vector.client import NexusVectorClient
 
 
 class SearchService:
     def __init__(
         self,
-        repository: PostgresMetadataRepository,
+        repository: MetadataRepository,
         vector_client: NexusVectorClient,
         embedding_provider: EmbeddingProvider,
         graph_repository=None,
@@ -23,13 +23,12 @@ class SearchService:
         self.graph_repository = graph_repository
 
     def search(self, request: SearchRequest) -> SearchResponse:
-        if hasattr(self.repository, "record_audit_log"):
-            self.repository.record_audit_log(
-                actor_id="system:search",
-                action="SEARCH_QUERY",
-                status=AuditStatus.SUCCESS,
-                details={"query": request.query, "limit": request.limit, "tags": request.tags},
-            )
+        self.repository.record_audit_log(
+            actor_id="system:search",
+            action="SEARCH_QUERY",
+            status=AuditStatus.SUCCESS,
+            details={"query": request.query, "limit": request.limit, "tags": request.tags},
+        )
         query_vector = self.embedding_provider.embed([request.query])[0]
         vector_limit = min(max(request.limit * 3, request.limit), 50)
         vector_results = self.vector_client.search(

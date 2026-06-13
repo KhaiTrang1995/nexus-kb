@@ -60,3 +60,32 @@ def _provenance(chunk: GraphChunkInput) -> dict[str, str]:
 
 def normalize_entity_name(name: str) -> str:
     return re.sub(r"\s+", " ", name.strip().lower())
+
+
+class WikilinkDocumentLinkExtractor:
+    """Extracts document-to-document LINKS_TO relationships from Obsidian wikilinks."""
+
+    def extract_wikilink_links(self, chunk: GraphChunkInput) -> list[GraphRelationshipCandidate]:
+        # Prefer explicit top-level wikilinks (from updated GraphChunkInput), fallback to metadata
+        wikilinks = getattr(chunk, "wikilinks", None) or chunk.metadata.get("wikilinks") or []
+        if not wikilinks:
+            return []
+
+        source_title = chunk.metadata.get("title") or str(chunk.document_id)
+        source_name = f"DOC:{source_title}"
+
+        candidates: list[GraphRelationshipCandidate] = []
+        for wl in wikilinks:
+            if not isinstance(wl, str) or not wl.strip():
+                continue
+            target_name = f"DOC:{wl.strip()}"
+            candidates.append(
+                GraphRelationshipCandidate(
+                    source_name=source_name,
+                    target_name=target_name,
+                    relationship_type="LINKS_TO",
+                    confidence=chunk.confidence,
+                    provenance=_provenance(chunk),
+                )
+            )
+        return candidates

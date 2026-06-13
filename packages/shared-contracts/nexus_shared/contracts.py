@@ -212,6 +212,7 @@ class GraphChunkInput(BaseModel):
     content: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    wikilinks: list[str] = Field(default_factory=list)
 
 
 class GraphEntityCandidate(BaseModel):

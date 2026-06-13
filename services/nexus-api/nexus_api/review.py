@@ -83,7 +83,6 @@ class ReviewService:
         chunk_id = UUID(qdrant_payload.chunk_id)
         metadata = dict(item.payload.get("chunk_metadata") or {})
         metadata["review_status"] = item.status.value
-        if hasattr(self.repository, "update_chunk_content"):
-            self.repository.update_chunk_content(chunk_id, item.content, metadata)
+        self.repository.update_chunk_content(chunk_id, item.content, metadata)
         vector = self.embedding_provider.embed([item.content])[0]
         self.vector_client.upsert_chunks([(chunk_id, vector, qdrant_payload)])

@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Match dark aesthetic from root index.html */
+:root {
+  --kb-dark: #07070c;
+  --kb-surface: #0f0f18;
+  --kb-card: rgba(20, 20, 32, 0.65);
+  --kb-primary: #6366f1;
+  --kb-primary-glow: rgba(99, 102, 241, 0.45);
+  --kb-text: #f3f4f6;
+  --kb-muted: #9ca3af;
+}
+
+body {
+  background-color: var(--kb-dark);
+  color: var(--kb-text);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.kb-card {
+  background-color: var(--kb-card);
+  border: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.kb-btn {
+  @apply px-4 py-2 rounded font-semibold transition;
+}
+
+.kb-btn-primary {
+  background: linear-gradient(135deg, var(--kb-primary), #a78bfa);
+  color: white;
+}
+
+.kb-btn-primary:hover {
+  box-shadow: 0 8px 24px var(--kb-primary-glow);
+}
+
+.nav-link {
+  @apply px-3 py-2 rounded hover:bg-white/5;
+}
+
+.nav-link.active {
+  background-color: rgba(99, 102, 241, 0.15);
+  color: var(--kb-primary);
+}
+
+/* Simple graph viz styles (ASCII-inspired, simple for MVP) */
+.graph-node {
+  @apply inline-block px-2 py-1 rounded text-sm border border-kb-primary/30 bg-kb-surface mr-1 mb-1;
+}
+
+.graph-link {
+  @apply text-kb-muted text-xs;
+}
