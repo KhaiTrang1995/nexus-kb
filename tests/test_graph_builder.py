@@ -116,9 +116,6 @@ class GraphBuilderTest(unittest.TestCase):
         doc_entities = [e for e in result.entities if e.entity_type == "DOCUMENT"]
         self.assertTrue(len(doc_entities) >= 2)  # at least source + target
 
-        # Source and target DOCUMENT nodes should exist due to wikilinks
-        self.assertTrue(len(doc_entities) >= 2)
-
         links_to = [r for r in result.relationships if r.relationship_type == "LINKS_TO"]
         self.assertTrue(len(links_to) >= 1)
         link = links_to[0]
