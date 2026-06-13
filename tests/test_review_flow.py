@@ -121,6 +121,15 @@ class ReviewRepository:
         self.audit_logs.append(record)
         return record
 
+    def list_audit_logs(self, limit=50, offset=0, action_filter=None, actor_filter=None):
+        return list(self.audit_logs)
+
+    def get_chunk_with_document(self, chunk_id):
+        return None
+
+    def list_approved_graph_chunks(self, limit=100):
+        return []
+
 
 class LowConfidenceChunker:
     def chunk_document(self, document):

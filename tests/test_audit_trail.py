@@ -98,6 +98,28 @@ class AuditRepository:
         self.audit_logs.append(record)
         return record
 
+    def list_audit_logs(self, limit=50, offset=0, action_filter=None, actor_filter=None):
+        # Return captured for audit tests; full filter not exercised here.
+        return list(self.audit_logs)
+
+    def create_review_item(self, *a, **k):
+        raise NotImplementedError("review not used in audit trail unit test")
+
+    def list_review_items(self, *a, **k):
+        return []
+
+    def get_review_item(self, item_id):
+        return None
+
+    def mark_review_item(self, *a, **k):
+        raise NotImplementedError("review not used in audit trail unit test")
+
+    def update_chunk_content(self, chunk_id, content, metadata=None):
+        pass
+
+    def list_approved_graph_chunks(self, limit=100):
+        return []
+
 
 class SingleDocumentLoader:
     def load(self, source_path: str, source_type: SourceType):
