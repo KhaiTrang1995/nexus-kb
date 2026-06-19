@@ -54,7 +54,7 @@ class GraphApiTest(unittest.TestCase):
             response = TestClient(app).get(f"/api/v1/graph/chunks/{chunk_id}")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"entities": [], "relationships": []})
+        self.assertEqual(response.json(), {"entities": [], "relationships": [], "hyperedges": []})
 
     def test_graph_ingest_success(self) -> None:
         mock_vector_client = MagicMock()

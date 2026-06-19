@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from functools import lru_cache
+from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException
 
@@ -35,7 +36,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Nexus-KB API", version="0.2.0")
+app = FastAPI(title="Nexus-KB API", version="0.3.0")
 
 
 @lru_cache(maxsize=1)
@@ -65,6 +66,48 @@ def build_embedding_provider() -> SentenceTransformerEmbeddingProvider:
 def build_graph_repository() -> SQLAlchemyGraphRepository:
     settings = get_settings()
     return SQLAlchemyGraphRepository(settings.postgres_dsn)
+
+
+@lru_cache(maxsize=1)
+def build_llm_gateway():
+    """Return a configured LLMGateway when LLM_ENABLED=true, else None."""
+    settings = get_settings()
+    if not settings.llm_enabled:
+        return None
+    from nexus_llm_gateway.gateway import LLMGateway
+    from nexus_llm_gateway.schemas import ModelRoute
+    if settings.llm_provider == "ollama":
+        from nexus_llm_gateway.providers import OllamaProvider
+        provider = OllamaProvider(base_url=settings.llm_base_url)
+    elif settings.llm_provider == "openai":
+        from nexus_llm_gateway.providers import OpenAIProvider
+        provider = OpenAIProvider(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
+    else:
+        logger.warning("Unknown LLM_PROVIDER=%s — LLM extraction disabled", settings.llm_provider)
+        return None
+    route = ModelRoute(task_type="entity_extraction", provider=settings.llm_provider, model=settings.llm_model)
+    default = ModelRoute(task_type="default", provider=settings.llm_provider, model=settings.llm_model)
+    return LLMGateway(providers={settings.llm_provider: provider}, routes=[route], default_route=default)
+
+
+@lru_cache(maxsize=1)
+def build_template_registry():
+    """Load domain templates from data/domain-templates/ if the directory exists."""
+    templates_dir = Path(__file__).parents[3] / "data" / "domain-templates"
+    if not templates_dir.exists():
+        return None
+    from nexus_graph_builder.domain_template import DomainTemplateRegistry
+    return DomainTemplateRegistry(templates_dir)
+
+
+@lru_cache(maxsize=1)
+def build_hyperedge_extractor():
+    """Return HyperedgeExtractor when LLM is enabled, else None."""
+    gateway = build_llm_gateway()
+    if gateway is None:
+        return None
+    from nexus_graph_builder.hyperedge_extractor import HyperedgeExtractor
+    return HyperedgeExtractor(gateway=gateway)
 
 
 @app.get("/health")
@@ -123,7 +166,15 @@ def build_graph(limit: int = 100) -> GraphBuildResult:
     if suggestions:
         logger.info("TSX suggestions for graph build: %s", [s.get("title") for s in suggestions[:3]])
 
-    service = GraphBuildService(build_repository(), build_graph_repository())
+    settings = get_settings()
+    service = GraphBuildService(
+        build_repository(),
+        build_graph_repository(),
+        llm_gateway=build_llm_gateway(),
+        template_registry=build_template_registry() if settings.llm_enabled else None,
+        domain=settings.graph_domain if settings.llm_enabled else None,
+        hyperedge_extractor=build_hyperedge_extractor(),
+    )
     result = service.build_from_approved_chunks(limit=limit)
 
     # Save experience with graph build outcome

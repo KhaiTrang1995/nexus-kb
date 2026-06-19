@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from nexus_graph_builder.extractor import (
+    LLMEntityExtractor,
     MetadataEntityExtractor,
     WikilinkDocumentLinkExtractor,
     normalize_entity_name,
 )
+from nexus_graph_builder.hyperedge_extractor import HyperedgeExtractor
+from nexus_graph_builder.merger import EntityMerger
 from nexus_shared.contracts import (
     GraphBuildResult,
     GraphChunkInput,
@@ -17,31 +20,45 @@ class GraphBuilder:
     def __init__(
         self,
         repository,
-        extractor: MetadataEntityExtractor | None = None,
+        extractor: MetadataEntityExtractor | LLMEntityExtractor | None = None,
         wikilink_extractor: WikilinkDocumentLinkExtractor | None = None,
+        hyperedge_extractor: HyperedgeExtractor | None = None,
     ) -> None:
         self.repository = repository
         self.extractor = extractor or MetadataEntityExtractor()
         self.wikilink_extractor = wikilink_extractor or WikilinkDocumentLinkExtractor()
+        self.hyperedge_extractor = hyperedge_extractor  # None = skip hyperedge extraction
+        self.merger = EntityMerger()  # merges cross-type duplicates before upsert
 
     def build_from_chunks(self, chunks: list[GraphChunkInput]) -> GraphBuildResult:
         entities_by_name: dict[tuple[str, str], object] = {}
+        # Type-agnostic index so relationships can be resolved regardless of entity_type
+        entities_by_norm_name: dict[str, object] = {}
         entities_by_id: dict[object, object] = {}
         relationships_by_id: dict[object, object] = {}
 
-        # Regular entities + relationships (TERM by default)
+        # Regular entities + relationships
         for chunk in chunks:
-            for candidate in self.extractor.extract_entities(chunk):
+            raw_candidates = self.extractor.extract_entities(chunk)
+            for candidate in self.merger.merge(raw_candidates):
                 entity = self.repository.upsert_entity(candidate)
                 key = (normalize_entity_name(candidate.name), candidate.entity_type)
                 entities_by_name[key] = entity
+                entities_by_norm_name[normalize_entity_name(candidate.name)] = entity
                 entities_by_id[entity.id] = entity
 
             for candidate in self.extractor.extract_relationships(chunk):
-                src_type = "TERM"
-                tgt_type = "TERM"
-                source = entities_by_name.get((normalize_entity_name(candidate.source_name), src_type))
-                target = entities_by_name.get((normalize_entity_name(candidate.target_name), tgt_type))
+                norm_src = normalize_entity_name(candidate.source_name)
+                norm_tgt = normalize_entity_name(candidate.target_name)
+                # Try (name, TERM) first for backward compat, then fall back to type-agnostic lookup
+                source = (
+                    entities_by_name.get((norm_src, "TERM"))
+                    or entities_by_norm_name.get(norm_src)
+                )
+                target = (
+                    entities_by_name.get((norm_tgt, "TERM"))
+                    or entities_by_norm_name.get(norm_tgt)
+                )
                 if source is None or target is None:
                     continue
                 relationship = self.repository.upsert_relationship(source, target, candidate)
@@ -128,7 +145,24 @@ class GraphBuilder:
                     rel = self.repository.upsert_relationship(source, target, rel_cand)
                     relationships_by_id[rel.id] = rel
 
+        # ── Hyperedge extraction (optional, n-ary relationships) ────────────
+        hyperedge_records: list = []
+        if self.hyperedge_extractor is not None and hasattr(self.repository, "upsert_hyperedge"):
+            for chunk in chunks:
+                for candidate in self.hyperedge_extractor.extract(chunk):
+                    # Resolve all entity names to records; skip if any name is unknown
+                    records = []
+                    for name in candidate.entity_names:
+                        record = entities_by_norm_name.get(normalize_entity_name(name))
+                        if record is not None:
+                            records.append(record)
+                    if len(set(r.id for r in records)) < 2:
+                        continue
+                    hyperedge = self.repository.upsert_hyperedge(records, candidate)
+                    hyperedge_records.append(hyperedge)
+
         return GraphBuildResult(
             entities=list(entities_by_id.values()),
             relationships=list(relationships_by_id.values()),
+            hyperedges=hyperedge_records,
         )

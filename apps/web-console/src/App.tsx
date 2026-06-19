@@ -5,6 +5,7 @@ import ReviewView from './features/review/ReviewView'
 import GraphView from './features/graph/GraphView'
 import AuditView from './features/audit/AuditView'
 import KnowledgeGraph from './pages/KnowledgeGraph'
+import IngestionView from './features/ingestion/IngestionView'
 
 type User = { id: string; name: string; role: string }
 
@@ -44,10 +45,11 @@ export default function App() {
   const navItems = [
     { path: '/', label: 'Search', icon: '🔍', always: true },
     { path: '/review', label: 'Review Queue', icon: '✅', requireRole: 'Reviewer' },
+    { path: '/ingest', label: 'Ingest', icon: '📥', requireRole: 'Reviewer' },
     { path: '/graph', label: 'Graph', icon: '🕸️', always: true },
     { path: '/knowledge-graph', label: 'Knowledge Graph', icon: '🧠', always: true },
     { path: '/audit', label: 'Audit', icon: '📜', always: true },
-  ].filter(item => item.always || (item.requireRole && role === item.requireRole))
+  ].filter(item => item.always || (item.requireRole && (role === item.requireRole || role === 'Auditor')))
 
   const canBuildGraph = role === 'Reviewer' || role === 'Auditor'
   const canSeeAdvancedAudit = role === 'Auditor'
@@ -97,6 +99,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<SearchView currentUser={currentUser} />} />
           <Route path="/review" element={<ReviewView currentUser={currentUser} />} />
+          <Route path="/ingest" element={<IngestionView currentUser={currentUser} />} />
           <Route path="/graph" element={<GraphView canBuild={canBuildGraph} currentUser={currentUser} />} />
           <Route path="/knowledge-graph" element={<KnowledgeGraph currentUser={currentUser} />} />
           <Route path="/audit" element={<AuditView canAdvanced={canSeeAdvancedAudit} currentUser={currentUser} />} />
@@ -104,7 +107,7 @@ export default function App() {
       </main>
 
       <footer className="text-center text-xs text-kb-muted py-8 border-t border-kb-primary/10">
-        Compact operational UI • Mock login + role-based permissions (design in docs/UI/) • Backend Phases 1-5 + document graph links complete
+        Compact operational UI • Mock login + role-based permissions (design in docs/UI/) • Backend Phases 1-7 complete (LLM Extraction Engine wired)
       </footer>
 
       {/* Login Modal (ASCII-designed) */}
