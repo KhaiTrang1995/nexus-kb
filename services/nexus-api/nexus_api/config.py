@@ -10,7 +10,7 @@ class Settings:
     qdrant_host: str = os.getenv("QDRANT_HOST", "localhost")
     qdrant_port: int = int(os.getenv("QDRANT_HTTP_PORT", "6333"))
     qdrant_collection: str = os.getenv("QDRANT_COLLECTION", "nexus_chunks")
-    embedding_model: str = os.getenv("NEXUS_EMBEDDING_MODEL", "BAAI/bge-m3")
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", os.getenv("NEXUS_EMBEDDING_MODEL", "BAAI/bge-m3"))
     embedding_dimension: int = int(os.getenv("NEXUS_EMBEDDING_DIMENSION", "1024"))
 
 

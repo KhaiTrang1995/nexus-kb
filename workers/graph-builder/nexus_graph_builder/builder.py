@@ -29,23 +29,6 @@ class GraphBuilder:
         entities_by_id: dict[object, object] = {}
         relationships_by_id: dict[object, object] = {}
 
-        # Ensure every source document has a first-class DOCUMENT entity in the graph
-        # (so documents are nodes, and wikilinks create edges between them)
-        for chunk in chunks:
-            title = chunk.metadata.get("title", str(chunk.document_id))
-            doc_name = f"DOC:{title}"
-            key = (normalize_entity_name(doc_name), "DOCUMENT")
-            if key not in entities_by_name:
-                cand = GraphEntityCandidate(
-                    name=doc_name,
-                    entity_type="DOCUMENT",
-                    confidence=1.0,
-                    provenance={"document_id": str(chunk.document_id), "chunk_id": str(chunk.chunk_id)},
-                )
-                ent = self.repository.upsert_entity(cand)
-                entities_by_name[key] = ent
-                entities_by_id[ent.id] = ent
-
         # Regular entities + relationships (TERM by default)
         for chunk in chunks:
             for candidate in self.extractor.extract_entities(chunk):

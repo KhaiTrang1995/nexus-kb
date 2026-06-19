@@ -19,10 +19,16 @@ class NexusVectorClient:
         port: int = 6333,
         collection_name: str = "nexus_chunks",
         vector_size: int = 1024,
+        url: str | None = None,
     ) -> None:
         self.collection_name = collection_name
         self.vector_size = vector_size
-        self.client = QdrantClient(host=host, port=port)
+        import os
+        qdrant_url = url or os.getenv("QDRANT_URL")
+        if qdrant_url:
+            self.client = QdrantClient(url=qdrant_url)
+        else:
+            self.client = QdrantClient(host=host, port=port)
 
     def ensure_collection(self) -> None:
         try:

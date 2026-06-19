@@ -4,6 +4,7 @@ import SearchView from './features/search/SearchView'
 import ReviewView from './features/review/ReviewView'
 import GraphView from './features/graph/GraphView'
 import AuditView from './features/audit/AuditView'
+import KnowledgeGraph from './pages/KnowledgeGraph'
 
 type User = { id: string; name: string; role: string }
 
@@ -38,13 +39,13 @@ export default function App() {
   }
 
   const role = currentUser?.role || ''
-  const userId = currentUser?.id || 'anonymous'
 
   // Permission-gated nav (per design)
   const navItems = [
     { path: '/', label: 'Search', icon: '🔍', always: true },
     { path: '/review', label: 'Review Queue', icon: '✅', requireRole: 'Reviewer' },
     { path: '/graph', label: 'Graph', icon: '🕸️', always: true },
+    { path: '/knowledge-graph', label: 'Knowledge Graph', icon: '🧠', always: true },
     { path: '/audit', label: 'Audit', icon: '📜', always: true },
   ].filter(item => item.always || (item.requireRole && role === item.requireRole))
 
@@ -97,6 +98,7 @@ export default function App() {
           <Route path="/" element={<SearchView currentUser={currentUser} />} />
           <Route path="/review" element={<ReviewView currentUser={currentUser} />} />
           <Route path="/graph" element={<GraphView canBuild={canBuildGraph} currentUser={currentUser} />} />
+          <Route path="/knowledge-graph" element={<KnowledgeGraph currentUser={currentUser} />} />
           <Route path="/audit" element={<AuditView canAdvanced={canSeeAdvancedAudit} currentUser={currentUser} />} />
         </Routes>
       </main>
