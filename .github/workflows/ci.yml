@@ -134,18 +134,17 @@ jobs:
           MALLOC_TRIM_THRESHOLD_: "-1"
         run: |
           # Disable bash errexit to safely capture exit code, even if process exits via SIGSEGV (139).
-          # bash -e is active by default in GHA; it aborts before exit_code=$? is reached.
+          # bash -e is active by default in GHA; it aborts before we capture the status code.
           set +e
 
           # Python 3.10/3.11: Skip test_web_console_integration.py (loads sentence-transformers + PyTorch).
           # These tests all pass, but GC teardown corrupts GIL state on 3.10/3.11 (exit 134 SIGABRT).
           # Python 3.12 has better GIL handling and these tests pass cleanly.
-          if [[ "${{ matrix.python-version }}" == "3.10" || "${{ matrix.python-version }}" == "3.11" ]]; then
+          if [[ "${{ matrix.python-version }}" == "3.10" ]] || [[ "${{ matrix.python-version }}" == "3.11" ]]; then
             python -m pytest -v --ignore=tests/test_web_console_integration.py
           else
             python -m pytest -v
           fi
-
           exit_code=$?
           set -e
 
