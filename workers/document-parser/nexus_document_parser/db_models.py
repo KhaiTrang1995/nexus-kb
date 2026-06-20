@@ -122,3 +122,21 @@ class GraphRelationshipModel(Base):
     provenance: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class GraphHyperedgeModel(Base):
+    __tablename__ = "graph_hyperedges"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    relationship_type: Mapped[str] = mapped_column(String(128), nullable=False, default="INVOLVES")
+    label: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    provenance: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class GraphHyperedgeMemberModel(Base):
+    __tablename__ = "graph_hyperedge_members"
+
+    hyperedge_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("graph_hyperedges.id", ondelete="CASCADE"), primary_key=True)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("graph_entities.id", ondelete="CASCADE"), primary_key=True)

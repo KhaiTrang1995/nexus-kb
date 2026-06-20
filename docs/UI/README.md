@@ -26,9 +26,9 @@ This directory contains the **UI design skill + artifacts** for the Nexus-KB ope
 6. Get L1 review (plain language).
 7. Only then: follow `frontend-plan.md` for code phases + create `apps/web-console/`.
 
-## Current Status (2026-06-11)
+## Current Status (2026-06-20)
 
-- Backend core (Phases 1-5) complete + verified (tests pass).
+- Backend core (Phases 1-7) complete + verified (tests pass).
 - This package provides the **pre-code ASCII + structured design** for the UI Layer described in `architecture.md`.
 - See `nexus-kb-operational-ui.md` for the first full design (Search, Review, Graph, Audit) with:
   - Multiple detailed ASCII wireframes
