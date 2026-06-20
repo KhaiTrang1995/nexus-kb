@@ -222,10 +222,12 @@ python -m pytest tests/test_live_integration_scaffold.py tests/test_live_graph_r
 - **Phase 3:** Confluence-oriented MCP source connector scaffold with source discovery, document read, user-context authorization, disabled mutating tools, and redacted errors. (Scaffold + tests complete)
 - **Phase 4:** Knowledge Graph builder with entity extraction, duplicate merge, relationship confidence/provenance, relational graph tables, graph APIs, and search result graph context. (Local MVP complete; tests + live graph repository pass)
 - **Phase 5:** LLM Gateway slice with routing, prompt category tracking, caching, retry, telemetry, and provider abstraction. (Slice complete + tests)
+- **Phase 6:** LLM Extraction Engine with entity/relationship extraction, domain template registry, hyperedge builder, SQLAlchemy persistence, and migration 004. (Implementation complete; Ollama + OpenAI providers wired)
+- **Phase 7:** Web Console (React + Vite + Tailwind) with SearchView graph panels, AuditView table + filters, GraphView builder, IngestionView form, and KnowledgeGraph stats page. (UI complete; all 4 core features functional; 169 tests passing)
 
-See `docs/frontend-plan.md` (new) for the UI / web-console architecture plan and Mermaid diagrams targeting the `apps/web-console/` placeholder (search + graph context, review queue/actions, audit viewer, ingestion status, per `architecture.md` UI Layer).
+See `docs/frontend-plan.md` for the web-console architecture plan, design rationale, and Mermaid diagrams. Web console provides a unified operational interface for ingestion, search, review, audit, and graph management.
 
-Future work remains for production authentication, a full web console implementation, production API gateway, real enterprise connector adapters, deployment hardening, and observability. All examples and tests use synthetic data only.
+Future work remains for production authentication, real enterprise connector adapters, deployment hardening, and observability. All examples and tests use synthetic data only.
 
 ## Contributing and Security
 

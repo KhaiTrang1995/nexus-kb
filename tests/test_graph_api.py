@@ -38,7 +38,10 @@ class GraphApiTest(unittest.TestCase):
             patch("nexus_api.main.build_repository", return_value=MetadataRepository()),
             patch("nexus_api.main.build_graph_repository", return_value=graph_repository),
         ):
-            response = TestClient(app).post("/api/v1/graph/build?limit=5")
+            response = TestClient(app).post(
+                "/api/v1/graph/build?limit=5",
+                headers={"X-User-Role": "Reviewer", "X-User-Id": "u2"},
+            )
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()

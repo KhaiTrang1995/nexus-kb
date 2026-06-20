@@ -17,10 +17,13 @@ from nexus_shared.contracts import (
 
 
 REVIEWER_ROLE = "Reviewer"
+AUDITOR_ROLE = "Auditor"
+PRIVILEGED_ROLES = frozenset({REVIEWER_ROLE, AUDITOR_ROLE})
 
 
 def require_reviewer(role: str | None) -> None:
-    if role != REVIEWER_ROLE:
+    """Require Reviewer or Auditor — matches web console role model."""
+    if role not in PRIVILEGED_ROLES:
         raise HTTPException(status_code=403, detail="reviewer role required")
 
 
