@@ -105,7 +105,7 @@ export default function IngestionView({ currentUser }: { currentUser: { id: stri
 
           <button
             onClick={runIngestion}
-            disabled={!canIngest || loading || !sourcePath.trim()}
+            disabled={!canIngest || loading}
             className={`kb-btn w-fit ${canIngest ? 'kb-btn-primary' : 'opacity-50 cursor-not-allowed border border-kb-primary/30'}`}
           >
             {loading ? 'Ingesting…' : 'Run Ingestion'}

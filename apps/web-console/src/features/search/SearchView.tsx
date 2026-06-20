@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 // Minimal types matching backend contracts (SearchRequest/Response + Graph)
@@ -47,13 +47,35 @@ interface SearchResponse {
   results: SearchResult[]
 }
 
+interface Stats {
+  graphNodes: number | null
+  pendingReviews: number | null
+}
+
 export default function SearchView({ currentUser }: { currentUser: { id: string; name: string; role: string } | null }) {
   const [query, setQuery] = useState('governed retrieval')
   const [tags, setTags] = useState<string[]>(['rag'])
   const [selected, setSelected] = useState<SearchResult | null>(null)
+  const [stats, setStats] = useState<Stats>({ graphNodes: null, pendingReviews: null })
 
   const role = currentUser?.role || ''
   const userId = currentUser?.id || 'anonymous'
+
+  useEffect(() => {
+    const headers: Record<string, string> = {}
+    if (role) headers['X-User-Role'] = role
+    if (userId) headers['X-User-Id'] = userId
+
+    Promise.allSettled([
+      fetch('/api/v1/graph/stats').then((r) => r.json()),
+      fetch('/api/v1/review/queue?limit=1', { headers }).then((r) => r.json()),
+    ]).then(([gResult, rResult]) => {
+      setStats({
+        graphNodes: gResult.status === 'fulfilled' ? (gResult.value?.node_count ?? null) : null,
+        pendingReviews: rResult.status === 'fulfilled' && Array.isArray(rResult.value) ? rResult.value.length : null,
+      })
+    })
+  }, [role, userId])
 
   const searchWithAuth = async (req: any) => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -83,9 +105,26 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
 
   return (
     <div>
-      <div className="mb-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
-        <p className="text-kb-muted text-sm">Hybrid (vector + rerank) + graph context (incl. new document LINKS_TO)</p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
+          <p className="text-kb-muted text-sm">Hybrid (vector + rerank) + graph context</p>
+        </div>
+        {/* Stats bar */}
+        <div className="flex gap-3 text-xs mt-1">
+          {stats.graphNodes !== null && (
+            <div className="kb-card px-3 py-1.5 flex gap-1.5 items-center">
+              <span className="text-kb-muted">Graph nodes</span>
+              <span className="font-semibold text-kb-primary">{stats.graphNodes.toLocaleString()}</span>
+            </div>
+          )}
+          {stats.pendingReviews !== null && stats.pendingReviews > 0 && (
+            <div className="kb-card px-3 py-1.5 flex gap-1.5 items-center border-amber-500/30">
+              <span className="text-kb-muted">Pending review</span>
+              <span className="font-semibold text-amber-400">{stats.pendingReviews}+</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Query bar - matches ASCII wireframe */}
@@ -179,18 +218,62 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
           </div>
           <div className="text-sm mt-2 whitespace-pre-wrap">{selected.content}</div>
 
-          <div className="mt-4">
-            <div className="text-sm font-medium mb-2">Graph (entities + relationships + document links)</div>
-            <div className="kb-card p-3 text-sm">
-              {selected.graph_entities.map((e) => (
-                <div key={e.id} className="mb-1">• <strong>{e.name}</strong> ({e.entity_type}) conf={e.confidence.toFixed(2)} prov={JSON.stringify(e.provenance)}</div>
-              ))}
-              {selected.graph_relationships.map((r, i) => (
-                <div key={i} className="graph-link ml-4">↳ {r.relationship_type} (conf {r.confidence.toFixed(2)}) — {JSON.stringify(r.provenance)}</div>
-              ))}
-              {selected.graph_relationships.length === 0 && <div className="text-kb-muted">No graph context for this chunk.</div>}
+          {(selected.graph_entities.length > 0 || selected.graph_relationships.length > 0) && (
+            <div className="mt-4">
+              <div className="text-sm font-medium mb-2">
+                Graph context
+                <span className="ml-2 text-xs text-kb-muted font-normal">
+                  {selected.graph_entities.length} entities · {selected.graph_relationships.length} relationships
+                </span>
+              </div>
+
+              {/* Entity badges grouped by type */}
+              {selected.graph_entities.length > 0 && (
+                <div className="mb-3">
+                  {Object.entries(
+                    selected.graph_entities.reduce<Record<string, typeof selected.graph_entities>>((acc, e) => {
+                      ;(acc[e.entity_type] ||= []).push(e)
+                      return acc
+                    }, {})
+                  ).map(([type, ents]) => (
+                    <div key={type} className="flex flex-wrap gap-1 mb-1 items-center">
+                      <span className="text-[10px] text-kb-muted w-24 shrink-0">{type}</span>
+                      {ents.map((e) => (
+                        <span
+                          key={e.id}
+                          title={`conf ${e.confidence.toFixed(2)}`}
+                          className="graph-node text-xs"
+                        >
+                          {e.name}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Relationships as readable arrows */}
+              {selected.graph_relationships.length > 0 && (
+                <div className="space-y-1">
+                  {selected.graph_relationships.map((r, i) => {
+                    const src = selected.graph_entities.find((e) => e.id === r.source_entity_id)
+                    const tgt = selected.graph_entities.find((e) => e.id === r.target_entity_id)
+                    return (
+                      <div key={i} className="flex items-center gap-1 text-xs">
+                        <span className="text-kb-text font-medium">{src?.name ?? r.source_entity_id.slice(0, 8)}</span>
+                        <span className="text-kb-primary/60 text-[10px] px-1">—{r.relationship_type}→</span>
+                        <span className="text-kb-text font-medium">{tgt?.name ?? r.target_entity_id.slice(0, 8)}</span>
+                        <span className="text-kb-muted text-[10px] ml-1">conf {r.confidence.toFixed(2)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          </div>
+          )}
+          {selected.graph_entities.length === 0 && (
+            <div className="mt-4 text-xs text-kb-muted">No graph context extracted for this chunk.</div>
+          )}
         </div>
       )}
 

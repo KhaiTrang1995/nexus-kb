@@ -116,7 +116,11 @@ def health() -> dict[str, str]:
 
 
 @app.post("/api/v1/ingest", response_model=IngestionResponse)
-def ingest(request: IngestionRequest) -> IngestionResponse:
+def ingest(
+    request: IngestionRequest,
+    x_user_role: str | None = Header(default=None),
+) -> IngestionResponse:
+    require_reviewer(x_user_role)
     # Intercept: get suggestions before write
     tsx_bridge.intercept(
         action=f"Ingest document from {request.source_path}",
@@ -157,7 +161,11 @@ def search(request: SearchRequest) -> SearchResponse:
 
 
 @app.post("/api/v1/graph/build", response_model=GraphBuildResult)
-def build_graph(limit: int = 100) -> GraphBuildResult:
+def build_graph(
+    limit: int = 100,
+    x_user_role: str | None = Header(default=None),
+) -> GraphBuildResult:
+    require_reviewer(x_user_role)
     # Intercept: get suggestions before graph build
     suggestions = tsx_bridge.intercept(
         action=f"Build knowledge graph from approved chunks (limit={limit})",

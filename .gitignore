@@ -76,3 +76,11 @@ qdrant-multi-node-cluster/data/*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local working docs — not for repo history
+changelog.md
+docs/phase*.md
+docs/new.md
+docs/action.md
+docs/web-console-integration-checklist.md
+docs/brainstorm-skill-package/
