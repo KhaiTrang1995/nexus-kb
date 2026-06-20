@@ -14,6 +14,7 @@ The goal is to prevent phase drift: do not call a phase complete unless the code
 | Phase 3: MCP Source Connector | Implemented scaffold | `mcp-servers/confluence-bridge` | `tests/test_mcp_confluence_bridge.py`; JSON runner via `python -m nexus_confluence_bridge`. |
 | Phase 4: Knowledge Graph Builder | Implemented local MVP | `workers/graph-builder`, graph APIs in `services/nexus-api`, migration `003_add_graph_tables.py` | `tests/test_graph_builder.py`, `tests/test_graph_api.py`, graph search tests, `tests/test_live_graph_repository.py`. |
 | Phase 5: LLM Gateway | Implemented slice | `services/llm-gateway` | `tests/test_llm_gateway.py`. |
+| Phase 6: LLM Extraction Engine | Implemented local MVP | `workers/graph-builder/nexus_graph_builder/extractor.py` (LLMEntityExtractor), `domain_template.py`, `hyperedge_extractor.py`, `merger.py`; `data/domain-templates/*.yaml`; `apps/web-console` (IngestionView, ReviewView real API, GraphCanvas); `services/nexus-api` (LLM wiring, OllamaProvider, OpenAIProvider) | `tests/test_llm_entity_extractor.py`, `tests/test_domain_template.py`, `tests/test_hyperedge_extractor.py`, `tests/test_entity_merger.py`. |
 
 ## Global Rules for Future Agents
 
@@ -142,6 +143,7 @@ Implemented intent:
   - `POST /api/v1/graph/build`
   - `GET /api/v1/graph/chunks/{chunk_id}`
 - Search results include `graph_entities` and `graph_relationships` when graph context exists.
+- Document-to-document linking via wikilinks: during graph build, wikilinks are resolved to create `LINKS_TO` relationships between `DOCUMENT`-typed entities (source and target), with full provenance (chunk_id + document_id). Source documents are always represented as DOCUMENT nodes. This enhances connectivity in the Knowledge Graph without changing existing entity/relationship behavior or APIs.
 
 Required tests:
 
@@ -184,6 +186,33 @@ Do not regress:
 - Workers must not call model providers directly once they integrate LLM behavior; route through the gateway.
 - Do not store raw prompts, secrets, API keys, or provider-specific credentials in telemetry.
 - External providers must be optional and disabled in offline tests.
+
+## Phase 6 Checklist
+
+Implemented intent:
+
+- `LLMEntityExtractor` — replaces regex fallback with LLM-powered extraction; per-chunk cache; falls back to `MetadataEntityExtractor` on failure.
+- `DomainTemplate` + `DomainTemplateRegistry` — YAML-driven entity/relationship type config; 5 domain files in `data/domain-templates/`.
+- `HyperedgeExtractor` — LLM-based n-ary relationship extraction (≥3 entities per fact); `min_members` guard.
+- `EntityMerger` — post-processing deduplication of entity candidates by normalized name across types ("dominant" strategy picks highest-confidence type).
+- `HyperedgeCandidate`, `HyperedgeRecord` contracts in `packages/shared-contracts`; `GraphBuildResult.hyperedges` field (backward-compatible default empty list).
+- `GraphBuildService` wires all Phase 6 components: `llm_gateway`, `template_registry`, `domain`, `hyperedge_extractor`.
+- `OllamaProvider` and `OpenAIProvider` added to `services/llm-gateway/nexus_llm_gateway/providers.py` (stdlib urllib, no new deps).
+- LLM config in `services/nexus-api/nexus_api/config.py`: `LLM_ENABLED`, `LLM_PROVIDER`, `LLM_MODEL`, `LLM_BASE_URL`, `LLM_API_KEY`, `GRAPH_DOMAIN`.
+- `POST /api/v1/graph/build` passes all Phase 6 components to `GraphBuildService` when `LLM_ENABLED=true`.
+- Web console additions: `IngestionView` (real `POST /api/v1/ingest`), `ReviewView` (real paginated API), `GraphCanvas` (SVG force-directed, zero new deps), `GraphView` updated with type filter / visual+JSON tabs / hyperedge list.
+- `GraphView.tsx` fixed: uses `method: 'POST'` on `/api/v1/graph/build`.
+
+Required tests:
+
+- `python -m pytest tests/test_llm_entity_extractor.py tests/test_domain_template.py tests/test_hyperedge_extractor.py tests/test_entity_merger.py -q`
+
+Do not regress:
+
+- `LLM_ENABLED=false` (default) must keep existing behavior — no LLM calls, regex extractor used.
+- Gateway must be optional; tests must pass offline without Ollama or OpenAI.
+- `GraphBuildResult.hyperedges` must default to `[]` for backward compatibility.
+- Provider HTTP calls must use stdlib `urllib` only; no new runtime dependencies.
 
 ## Repository-Wide Verification
 
