@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY packages/ /app/packages/
+COPY workers/ /app/workers/
+COPY services/ /app/services/
+COPY infrastructure/ /app/infrastructure/
+
+# Set Python path
+ENV PYTHONPATH="/app/packages/shared-contracts:/app/packages/vector-client:/app/workers/document-parser:/app/workers/graph-builder:/app/services/nexus-api:/app/services/llm-gateway"
+
+# Run migrations on startup, then start API
+CMD ["sh", "-c", "alembic -c infrastructure/alembic.ini upgrade head && uvicorn nexus_api.main:app --host 0.0.0.0 --port 8000"]

@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexus-kb-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexus_kb}
+      POSTGRES_USER: ${POSTGRES_USER:-nexus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus_dev_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-network
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.3
+    container_name: nexus-kb-qdrant
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: nexus-kb-api
+    environment:
+      POSTGRES_DSN: "postgresql+psycopg://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexus_dev_password}@postgres:5432/${POSTGRES_DB:-nexus_kb}"
+      QDRANT_HOST: "qdrant"
+      QDRANT_HTTP_PORT: "6333"
+      NEXUS_EMBEDDING_MODEL: ${NEXUS_EMBEDDING_MODEL:-BAAI/bge-m3}
+      NEXUS_EMBEDDING_DIMENSION: ${NEXUS_EMBEDDING_DIMENSION:-1024}
+      # LLM Extraction Engine (Phase 6)
+      LLM_ENABLED: ${LLM_ENABLED:-false}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2:3b}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434}
+      GRAPH_DOMAIN: ${GRAPH_DOMAIN:-general}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nexus-network
+    volumes:
+      - ./data:/app/data
+
+  web:
+    build:
+      context: ./apps/web-console
+      dockerfile: Dockerfile
+    container_name: nexus-kb-web
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    depends_on:
+      - api
+    networks:
+      - nexus-network
+
+volumes:
+  postgres_data:
+  qdrant_data:
+
+networks:
+  nexus-network:
+    driver: bridge

@@ -169,8 +169,6 @@ export default function GraphCanvas({ nodes, edges }: { nodes: GraphNode[]; edge
     )
   }
 
-  const nodeIndex = Object.fromEntries(nodes.map(n => [n.id, n]))
-
   return (
     <div className="relative select-none">
       <svg

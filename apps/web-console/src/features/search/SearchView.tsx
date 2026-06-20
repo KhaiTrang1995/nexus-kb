@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-// Minimal types matching backend contracts (SearchRequest/Response + Graph)
-interface SearchRequest {
-  query: string
-  limit?: number
-  tags?: string[]
-  source_type?: string | null
-}
+// Minimal types matching backend contracts (Graph)
 
 interface GraphEntity {
   id: string
@@ -42,10 +36,6 @@ interface SearchResult {
   graph_relationships: GraphRelationship[]
 }
 
-interface SearchResponse {
-  query: string
-  results: SearchResult[]
-}
 
 interface Stats {
   graphNodes: number | null
@@ -99,8 +89,8 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
   const results = data?.results || []
 
   // Simple filter for demo (tags)
-  const filtered = results.filter((r) =>
-    tags.length === 0 || tags.some((t) => r.tags.includes(t))
+  const filtered = results.filter((r: SearchResult) =>
+    tags.length === 0 || tags.some((t: string) => r.tags.includes(t))
   )
 
   return (
@@ -164,7 +154,7 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
 
       {/* Results list - matches ASCII wireframe */}
       <div className="space-y-3">
-        {filtered.map((r) => (
+        {filtered.map((r: SearchResult) => (
           <div
             key={r.chunk_id}
             onClick={() => setSelected(r)}
@@ -184,7 +174,7 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
             <div className="mt-2 text-sm" dangerouslySetInnerHTML={{ __html: r.snippet }} />
 
             <div className="mt-2 flex flex-wrap gap-1 text-xs">
-              {r.tags.map((t) => <span key={t} className="px-1.5 py-0.5 bg-white/5 rounded">#{t}</span>)}
+              {r.tags.map((t: string) => <span key={t} className="px-1.5 py-0.5 bg-white/5 rounded">#{t}</span>)}
               {r.wikilinks.length > 0 && <span className="text-kb-muted">wikilinks: {r.wikilinks.join(', ')}</span>}
             </div>
 
@@ -193,14 +183,14 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
               <div className="mt-3 pt-3 border-t border-kb-primary/10 text-xs">
                 <div className="text-kb-muted mb-1">Graph context ({r.graph_entities.length} entities, {r.graph_relationships.length} rels)</div>
                 <div className="flex flex-wrap gap-1">
-                  {r.graph_entities.slice(0, 4).map((e) => (
+                  {r.graph_entities.slice(0, 4).map((e: GraphEntity) => (
                     <span key={e.id} className="graph-node">{e.name} ({e.entity_type})</span>
                   ))}
                 </div>
                 {/* Document links (new from wikilinks) */}
-                {r.graph_relationships.filter((rel) => rel.relationship_type === 'LINKS_TO').length > 0 && (
+                {r.graph_relationships.filter((rel: GraphRelationship) => rel.relationship_type === 'LINKS_TO').length > 0 && (
                   <div className="mt-1 text-[10px] text-kb-primary">
-                    Document links: {r.graph_relationships.filter(r => r.relationship_type === 'LINKS_TO').length} (see Graph tab for details)
+                    Document links: {r.graph_relationships.filter((rel: GraphRelationship) => rel.relationship_type === 'LINKS_TO').length} (see Graph tab for details)
                   </div>
                 )}
               </div>
@@ -231,14 +221,14 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
               {selected.graph_entities.length > 0 && (
                 <div className="mb-3">
                   {Object.entries(
-                    selected.graph_entities.reduce<Record<string, typeof selected.graph_entities>>((acc, e) => {
+                    selected.graph_entities.reduce<Record<string, GraphEntity[]>>((acc, e: GraphEntity) => {
                       ;(acc[e.entity_type] ||= []).push(e)
                       return acc
                     }, {})
-                  ).map(([type, ents]) => (
+                  ).map(([type, ents]: [string, GraphEntity[]]) => (
                     <div key={type} className="flex flex-wrap gap-1 mb-1 items-center">
                       <span className="text-[10px] text-kb-muted w-24 shrink-0">{type}</span>
-                      {ents.map((e) => (
+                      {ents.map((e: GraphEntity) => (
                         <span
                           key={e.id}
                           title={`conf ${e.confidence.toFixed(2)}`}
@@ -255,9 +245,9 @@ export default function SearchView({ currentUser }: { currentUser: { id: string;
               {/* Relationships as readable arrows */}
               {selected.graph_relationships.length > 0 && (
                 <div className="space-y-1">
-                  {selected.graph_relationships.map((r, i) => {
-                    const src = selected.graph_entities.find((e) => e.id === r.source_entity_id)
-                    const tgt = selected.graph_entities.find((e) => e.id === r.target_entity_id)
+                  {selected.graph_relationships.map((r: GraphRelationship, i: number) => {
+                    const src = selected.graph_entities.find((e: GraphEntity) => e.id === r.source_entity_id)
+                    const tgt = selected.graph_entities.find((e: GraphEntity) => e.id === r.target_entity_id)
                     return (
                       <div key={i} className="flex items-center gap-1 text-xs">
                         <span className="text-kb-text font-medium">{src?.name ?? r.source_entity_id.slice(0, 8)}</span>
