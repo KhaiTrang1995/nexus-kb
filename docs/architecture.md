@@ -1,6 +1,11 @@
 # Architecture
 
-Enterprise Knowledge Hub is designed as a modular knowledge platform for enterprise document ingestion, retrieval augmented generation, knowledge graph construction, and governed AI workflows.
+Enterprise Knowledge Hub is designed as a modular knowledge platform for enterprise document ingestion, retrieval augmented generation, knowledge graph construction, and governed AI workflows. Nexus-KB is the implementation name for this architecture.
+
+Related documents:
+
+- [action.md](action.md): strategy, roadmap, and execution plan.
+- [phase-checklist.md](phase-checklist.md): phase completion gates and verification evidence.
 
 ## Design Principles
 
@@ -73,38 +78,71 @@ Recommended storage responsibilities:
 7. Verified content is committed to metadata storage, vector index, and graph storage.
 8. Audit records capture actor, source, model, prompt category, result confidence, and storage IDs.
 
-## Planned Monorepo Structure
+## Implementation Status
+
+This section maps the target architecture to what is actually implemented in the repository. It is the bridge between this document and [phase-checklist.md](phase-checklist.md). The roadmap and phase intent are tracked in [action.md](action.md).
+
+| Architecture layer | Status | Implemented module |
+| --- | --- | --- |
+| UI Layer | Planned | None yet (`index.html` is a placeholder landing page) |
+| Backend Layer | Implemented slice | `services/nexus-api` (ingest, search, audit, review, graph APIs) |
+| Authorization | Mock only | `X-User-Role` header check in `services/nexus-api`; no real RBAC service |
+| Orchestration Layer | Planned | None yet (ingestion runs in-process) |
+| AI Processing Layer | Implemented MVP | `workers/document-parser`, `workers/graph-builder` |
+| LLM Gateway | Implemented slice | `services/llm-gateway` |
+| MCP Connector Layer | Implemented scaffold | `mcp-servers/confluence-bridge` |
+| Storage Layer | Implemented MVP | PostgreSQL via Alembic migrations, Qdrant via `packages/vector-client` |
+| Shared Contracts | Implemented | `packages/shared-contracts` |
+
+Audit and human review (Phase 2) are implemented in `services/nexus-api/nexus_api/audit.py` and `review.py`. Knowledge Graph tables and APIs (Phase 4) are implemented through migration `003_add_graph_tables.py`.
+
+## Monorepo Structure
+
+Implemented today:
 
 ```text
-apps/
-|-- web-console/                 # Search, graph, ingestion, and review UI
-
 services/
-|-- api-gateway/                 # API boundary and request orchestration
-|-- auth-service/                # Identity, RBAC, and policy checks
-|-- rule-engine/                 # Workflow routing and model selection
-|-- llm-gateway/                 # Model routing, caching, retries, and telemetry
+|-- nexus-api/                   # FastAPI ingest, search, audit, review, and graph API
+|-- llm-gateway/                 # Model routing, caching, retries, and telemetry slice
 
 workers/
-|-- document-parser/             # Parsing, chunking, OCR, and extraction
+|-- document-parser/             # Parsing, chunking, and embedding
 |-- graph-builder/               # Entity merge and relationship construction
 
 mcp-servers/
-|-- confluence-bridge/           # Controlled Confluence access
-|-- internal-db-bridge/          # Controlled legacy database access
+|-- confluence-bridge/           # Controlled Confluence access scaffold
 
 packages/
 |-- shared-contracts/            # API schemas and shared types
-|-- audit-client/                # Audit event helpers
 |-- vector-client/               # Qdrant client wrapper
 
 infrastructure/
-|-- docker/                      # Local compose files
-|-- migrations/                  # Database migrations and seed data
-|-- observability/               # Metrics, dashboards, and alerts
+|-- alembic/                     # Alembic migration environment and versions
+|-- migrations/                  # SQL init scripts for local containers
 ```
 
-Create these directories only when implementation begins. Until then, keep them out of git or preserve intentional placeholders with `.gitkeep`.
+Planned, not yet implemented (create only when the corresponding phase begins; see [action.md](action.md)):
+
+```text
+apps/
+|-- web-console/                 # Search, graph, ingestion, and review UI (Phase 8)
+
+services/
+|-- api-gateway/                 # Production API boundary and request orchestration
+|-- auth-service/                # Identity, RBAC, and policy checks (Phase 7)
+|-- rule-engine/                 # Workflow routing and model selection
+
+mcp-servers/
+|-- internal-db-bridge/          # Controlled legacy database access (Phase 10)
+
+packages/
+|-- audit-client/                # Audit event helpers
+
+infrastructure/
+|-- observability/               # Metrics, dashboards, and alerts (Phase 11)
+```
+
+Until a planned directory is implemented, keep it out of git or preserve an intentional placeholder with `.gitkeep`.
 
 ## Security and Compliance
 
