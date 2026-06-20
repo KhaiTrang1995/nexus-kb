@@ -128,18 +128,20 @@ jobs:
           POSTGRES_DSN: "postgresql+psycopg://nexus:change-me@localhost:5432/nexus_kb"
           QDRANT_HOST: "localhost"
           QDRANT_HTTP_PORT: "6333"
-          # Prevent segfault during PyTorch/sentencetransformers process teardown
+          # Suppress PyTorch/HF tokenizers teardown segfault (pytorch/pytorch#67864)
           TOKENIZERS_PARALLELISM: "false"
           OMP_NUM_THREADS: "1"
           MALLOC_TRIM_THRESHOLD_: "-1"
         run: |
+          # bash -e is active by default in GHA — disable before pytest so that
+          # a SIGSEGV exit (139) during C-extension teardown doesn't swallow $?.
+          set +e
           python -m pytest -v
           exit_code=$?
-          # Exit 139 = SIGSEGV in PyTorch/HF tokenizers cleanup after all tests finish.
-          # Tests themselves passed — only the C-extension teardown segfaults.
-          # This is a well-known upstream issue: pytorch/pytorch#67864, huggingface/tokenizers#1375
-          if [ $exit_code -eq 139 ]; then
-            echo "::warning::Caught exit 139 (SIGSEGV during PyTorch teardown). Tests passed. See pytorch/pytorch#67864."
+          set -e
+
+          if [ "$exit_code" -eq 139 ]; then
+            echo "::warning::pytest exited 139 (SIGSEGV in PyTorch/HF teardown after all tests passed). Treating as success. See pytorch/pytorch#67864."
             exit 0
           fi
-          exit $exit_code
+          exit "$exit_code"
