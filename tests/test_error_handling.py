@@ -37,6 +37,10 @@ class FailingPathRepository:
             error_message=error_message,
         )
 
+    def record_audit_log(self, actor_id, action, status, resource_id=None, details=None):
+        # Stub for error path test (INGEST_START is recorded before load failure surfaces).
+        pass
+
 
 class NoopVectorClient:
     def upsert_chunks(self, points):

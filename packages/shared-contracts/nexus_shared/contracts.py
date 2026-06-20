@@ -212,6 +212,7 @@ class GraphChunkInput(BaseModel):
     content: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    wikilinks: list[str] = Field(default_factory=list)
 
 
 class GraphEntityCandidate(BaseModel):
@@ -251,9 +252,29 @@ class GraphRelationshipRecord(BaseModel):
     updated_at: datetime | None = None
 
 
+class HyperedgeCandidate(BaseModel):
+    """An n-ary relationship that connects 3 or more entities simultaneously."""
+    entity_names: list[str]           # 3+ entity names involved in this fact
+    relationship_type: str = "INVOLVES"
+    label: str = ""                   # human-readable description of the n-ary fact
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    provenance: dict[str, Any] = Field(default_factory=dict)
+
+
+class HyperedgeRecord(BaseModel):
+    id: UUID
+    entity_ids: list[UUID]
+    relationship_type: str
+    label: str = ""
+    confidence: float
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None
+
+
 class GraphBuildResult(BaseModel):
     entities: list[GraphEntityRecord]
     relationships: list[GraphRelationshipRecord]
+    hyperedges: list[HyperedgeRecord] = Field(default_factory=list)
 
 
 SearchResult.model_rebuild()

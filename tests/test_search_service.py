@@ -17,6 +17,10 @@ class FakeRepository:
     def get_chunk_with_document(self, chunk_id):
         return self.rows.get(chunk_id)
 
+    def record_audit_log(self, actor_id, action, status, resource_id=None, details=None):
+        # Audit side-effect stub for search unit tests; real audit trail tested separately.
+        pass
+
 
 class FakeVectorClient:
     def __init__(self, results) -> None:

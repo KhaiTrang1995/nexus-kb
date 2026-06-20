@@ -216,14 +216,16 @@ python -m pytest tests/test_live_integration_scaffold.py tests/test_live_graph_r
 
 ## Roadmap Status
 
-- **Phase 0:** Documentation, architecture source-of-truth, agent rules, and repository safety baseline.
-- **Phase 1 / 1.5:** Local and Obsidian ingestion, PostgreSQL metadata, Qdrant vectors, markdown-aware chunking, hybrid reranking, snippets, and tests.
-- **Phase 2:** Audit logs, review queue, review actions, mock reviewer RBAC, and audit/review APIs.
-- **Phase 3:** Confluence-oriented MCP source connector scaffold with source discovery, document read, user-context authorization, disabled mutating tools, and redacted errors.
-- **Phase 4:** Knowledge Graph builder with entity extraction, duplicate merge, relationship confidence/provenance, relational graph tables, graph APIs, and search result graph context.
-- **Phase 5:** LLM Gateway slice with routing, prompt category tracking, caching, retry, telemetry, and provider abstraction.
+- **Phase 0:** Documentation, architecture source-of-truth, agent rules, and repository safety baseline. (Complete)
+- **Phase 1 / 1.5:** Local and Obsidian ingestion, PostgreSQL metadata, Qdrant vectors, markdown-aware chunking, hybrid reranking, snippets, and tests. (Local MVP complete; offline + live tests pass)
+- **Phase 2:** Audit logs, review queue, review actions, mock reviewer RBAC, and audit/review APIs. (Local MVP complete; full port contracts, psycopg/SQLAlchemy parity, explicit calls; tests pass)
+- **Phase 3:** Confluence-oriented MCP source connector scaffold with source discovery, document read, user-context authorization, disabled mutating tools, and redacted errors. (Scaffold + tests complete)
+- **Phase 4:** Knowledge Graph builder with entity extraction, duplicate merge, relationship confidence/provenance, relational graph tables, graph APIs, and search result graph context. (Local MVP complete; tests + live graph repository pass)
+- **Phase 5:** LLM Gateway slice with routing, prompt category tracking, caching, retry, telemetry, and provider abstraction. (Slice complete + tests)
 
-Future work remains for production authentication, a full web console, production API gateway, real enterprise connector adapters, deployment hardening, and observability.
+See `docs/frontend-plan.md` (new) for the UI / web-console architecture plan and Mermaid diagrams targeting the `apps/web-console/` placeholder (search + graph context, review queue/actions, audit viewer, ingestion status, per `architecture.md` UI Layer).
+
+Future work remains for production authentication, a full web console implementation, production API gateway, real enterprise connector adapters, deployment hardening, and observability. All examples and tests use synthetic data only.
 
 ## Contributing and Security
 

@@ -9,6 +9,8 @@ from nexus_shared.contracts import (
     GraphEntityRecord,
     GraphRelationshipCandidate,
     GraphRelationshipRecord,
+    HyperedgeCandidate,
+    HyperedgeRecord,
 )
 
 
@@ -16,6 +18,7 @@ class InMemoryGraphRepository:
     def __init__(self) -> None:
         self.entities: dict[tuple[str, str], GraphEntityRecord] = {}
         self.relationships: dict[tuple[UUID, UUID, str], GraphRelationshipRecord] = {}
+        self.hyperedges: list[HyperedgeRecord] = []
 
     def upsert_entity(self, candidate: GraphEntityCandidate) -> GraphEntityRecord:
         normalized_name = normalize_entity_name(candidate.name)
@@ -70,6 +73,29 @@ class InMemoryGraphRepository:
         )
         self.relationships[key] = merged
         return merged
+
+    def upsert_hyperedge(
+        self,
+        entity_records: list[GraphEntityRecord],
+        candidate: HyperedgeCandidate,
+    ) -> HyperedgeRecord:
+        entity_ids = [e.id for e in entity_records]
+        # Deduplicate by sorted entity_ids + type
+        key = (tuple(sorted(str(eid) for eid in entity_ids)), candidate.relationship_type)
+        for existing in self.hyperedges:
+            existing_key = (tuple(sorted(str(eid) for eid in existing.entity_ids)), existing.relationship_type)
+            if existing_key == key:
+                return existing
+        record = HyperedgeRecord(
+            id=uuid4(),
+            entity_ids=entity_ids,
+            relationship_type=candidate.relationship_type,
+            label=candidate.label,
+            confidence=candidate.confidence,
+            provenance=candidate.provenance,
+        )
+        self.hyperedges.append(record)
+        return record
 
     def related_to_entity(self, entity_id: UUID) -> list[GraphRelationshipRecord]:
         return [

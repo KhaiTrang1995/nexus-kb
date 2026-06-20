@@ -94,6 +94,34 @@ class GraphBuilderTest(unittest.TestCase):
         self.assertEqual(len(result.entities), 2)
         self.assertEqual(len(result.relationships), 1)
 
+    def test_extracts_document_links_from_wikilinks_and_creates_LINKS_TO(self) -> None:
+        repository = InMemoryGraphRepository()
+        builder = GraphBuilder(repository)
+        chunk_id = uuid4()
+        document_id = uuid4()
+
+        result = builder.build_from_chunks(
+            [
+                GraphChunkInput(
+                    chunk_id=chunk_id,
+                    document_id=document_id,
+                    content="See also [[Related Note]] and [[Another Doc]].",
+                    metadata={"title": "Platform.md"},
+                    wikilinks=["Related Note", "Another Doc"],
+                )
+            ]
+        )
+
+        # Should create DOCUMENT entities for source docs + targets, and LINKS_TO relationships
+        doc_entities = [e for e in result.entities if e.entity_type == "DOCUMENT"]
+        self.assertTrue(len(doc_entities) >= 2)  # at least source + target
+
+        links_to = [r for r in result.relationships if r.relationship_type == "LINKS_TO"]
+        self.assertTrue(len(links_to) >= 1)
+        link = links_to[0]
+        self.assertEqual(link.provenance.get("document_id"), str(document_id))
+        self.assertEqual(link.provenance.get("chunk_id"), str(chunk_id))
+
 
 if __name__ == "__main__":
     unittest.main()
