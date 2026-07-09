@@ -56,7 +56,7 @@ class AuditApiContractTest(unittest.TestCase):
                 created_at=datetime.now(timezone.utc),
             ),
         ]
-        with patch("nexus_api.main.build_repository", return_value=self._mock_repo(records)):
+        with patch("nexus_api.routers.audit.build_repository", return_value=self._mock_repo(records)):
             response = TestClient(app).get("/api/v1/audit?limit=20&offset=0")
 
         self.assertEqual(response.status_code, 200)
@@ -75,7 +75,7 @@ class AuditApiContractTest(unittest.TestCase):
     def test_audit_supports_action_and_actor_filters(self) -> None:
         """Edge case: query params action_filter and actor_filter are forwarded to repository."""
         repo = self._mock_repo([])
-        with patch("nexus_api.main.build_repository", return_value=repo):
+        with patch("nexus_api.routers.audit.build_repository", return_value=repo):
             TestClient(app).get(
                 "/api/v1/audit?limit=5&offset=10&action_filter=GRAPH_WRITE&actor_filter=u3",
                 headers={"X-User-Role": "Auditor", "X-User-Id": "u3"},
@@ -88,15 +88,23 @@ class AuditApiContractTest(unittest.TestCase):
             actor_filter="u3",
         )
 
-    def test_audit_ignores_rbac_headers(self) -> None:
-        """Contract gap: backend does not enforce Auditor-only actor_filter — UI-only gate."""
+    def test_audit_actor_filter_requires_auditor_role(self) -> None:
+        """Server-side RBAC: actor_filter restricted to Auditor role."""
         repo = self._mock_repo([])
-        with patch("nexus_api.main.build_repository", return_value=repo):
+        with patch("nexus_api.routers.audit.build_repository", return_value=repo):
             response = TestClient(app).get(
                 "/api/v1/audit?actor_filter=secret-actor",
                 headers={"X-User-Role": "Searcher"},
             )
+        self.assertEqual(response.status_code, 403)
 
+    def test_audit_actor_filter_allowed_for_auditor(self) -> None:
+        repo = self._mock_repo([])
+        with patch("nexus_api.routers.audit.build_repository", return_value=repo):
+            response = TestClient(app).get(
+                "/api/v1/audit?actor_filter=secret-actor",
+                headers={"X-User-Role": "Auditor"},
+            )
         self.assertEqual(response.status_code, 200)
         repo.list_audit_logs.assert_called_once()
         self.assertEqual(repo.list_audit_logs.call_args.kwargs["actor_filter"], "secret-actor")
@@ -148,9 +156,9 @@ class GraphBuildApiContractTest(unittest.TestCase):
         mock_service.build_from_approved_chunks.return_value = result
 
         with (
-            patch("nexus_api.main.build_repository", return_value=MetadataRepository()),
-            patch("nexus_api.main.build_graph_repository"),
-            patch("nexus_api.main.GraphBuildService", return_value=mock_service),
+            patch("nexus_api.routers.graph.build_repository", return_value=MetadataRepository()),
+            patch("nexus_api.routers.graph.build_graph_repository"),
+            patch("nexus_api.routers.graph.GraphBuildService", return_value=mock_service),
         ):
             response = TestClient(app).post(
                 "/api/v1/graph/build?limit=25",
@@ -181,9 +189,9 @@ class GraphBuildApiContractTest(unittest.TestCase):
                 return []
 
         with (
-            patch("nexus_api.main.build_repository", return_value=MetadataRepository()),
-            patch("nexus_api.main.build_graph_repository"),
-            patch("nexus_api.main.GraphBuildService", return_value=mock_service),
+            patch("nexus_api.routers.graph.build_repository", return_value=MetadataRepository()),
+            patch("nexus_api.routers.graph.build_graph_repository"),
+            patch("nexus_api.routers.graph.GraphBuildService", return_value=mock_service),
         ):
             response = TestClient(app).post(
                 "/api/v1/graph/build?limit=1",
@@ -213,7 +221,7 @@ class IngestApiContractTest(unittest.TestCase):
             error_message=None,
         )
 
-        with patch("nexus_api.main.IngestionPipeline") as mock_pipeline_cls:
+        with patch("nexus_api.routers.ingest.IngestionPipeline") as mock_pipeline_cls:
             mock_pipeline_cls.return_value.ingest.return_value = mock_result
             response = TestClient(app).post(
                 "/api/v1/ingest",
@@ -258,7 +266,7 @@ class SearchStatsContractTest(unittest.TestCase):
         mock_collection_info.points_count = 128
         mock_vector_client.client.get_collection.return_value = mock_collection_info
 
-        with patch("nexus_api.main.build_graph_vector_client", return_value=mock_vector_client):
+        with patch("nexus_api.routers.graph.build_graph_vector_client", return_value=mock_vector_client):
             response = TestClient(app).get("/api/v1/graph/stats")
 
         self.assertEqual(response.status_code, 200)
@@ -272,7 +280,7 @@ class SearchStatsContractTest(unittest.TestCase):
         mock_collection_info.points_count = 7
         mock_vector_client.client.get_collection.return_value = mock_collection_info
 
-        with patch("nexus_api.main.build_graph_vector_client", return_value=mock_vector_client):
+        with patch("nexus_api.routers.graph.build_graph_vector_client", return_value=mock_vector_client):
             response = TestClient(app).get("/api/v1/graph/stats")
 
         self.assertEqual(mock_vector_client.collection_name, "nexus_graph")
@@ -287,9 +295,9 @@ class RbacMismatchTest(unittest.TestCase):
         repo = MagicMock()
         repo.list_review_items.return_value = []
         with (
-            patch("nexus_api.main.build_repository", return_value=repo),
-            patch("nexus_api.main.build_vector_client"),
-            patch("nexus_api.main.build_embedding_provider"),
+            patch("nexus_api.routers.review.build_repository", return_value=repo),
+            patch("nexus_api.routers.review.build_vector_client"),
+            patch("nexus_api.routers.review.build_embedding_provider"),
         ):
             response = TestClient(app).get(
                 "/api/v1/review/queue?limit=1",
@@ -304,9 +312,9 @@ class RbacMismatchTest(unittest.TestCase):
         repo = MagicMock()
         repo.list_review_items.return_value = []
         with (
-            patch("nexus_api.main.build_repository", return_value=repo),
-            patch("nexus_api.main.build_vector_client"),
-            patch("nexus_api.main.build_embedding_provider"),
+            patch("nexus_api.routers.review.build_repository", return_value=repo),
+            patch("nexus_api.routers.review.build_vector_client"),
+            patch("nexus_api.routers.review.build_embedding_provider"),
         ):
             response = TestClient(app).get(
                 "/api/v1/review/queue?limit=1",

@@ -77,6 +77,13 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Windows NUL redirect artifacts
+**/nul
+
+# Nested repos (separate git projects)
+vbsec/
+brainstorm-skill-package/
+
 # Local working docs — not for repo history
 changelog.md
 docs/phase*.md

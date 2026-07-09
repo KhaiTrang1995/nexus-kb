@@ -84,25 +84,31 @@ This section maps the target architecture to what is actually implemented in the
 
 | Architecture layer | Status | Implemented module |
 | --- | --- | --- |
-| UI Layer | Planned | None yet (`index.html` is a placeholder landing page) |
-| Backend Layer | Implemented slice | `services/nexus-api` (ingest, search, audit, review, graph APIs) |
-| Authorization | Mock only | `X-User-Role` header check in `services/nexus-api`; no real RBAC service |
+| UI Layer | Implemented | `apps/web-console` (React + Vite + Tailwind operational console) |
+| Backend Layer | Implemented | `services/nexus-api` (modular routers: ingest, search, audit, review, graph, auth, deliberate) |
+| Authentication | Implemented | JWT auth module (`services/nexus-api/nexus_api/auth/`) with dev and production modes |
+| Authorization | Implemented | Server-side RBAC via FastAPI `Depends()` on all privileged endpoints |
 | Orchestration Layer | Planned | None yet (ingestion runs in-process) |
-| AI Processing Layer | Implemented MVP | `workers/document-parser`, `workers/graph-builder` |
+| AI Processing Layer | Implemented MVP | `workers/document-parser` (markdown/text + markitdown-based PDF/DOCX/XLSX/PPTX/CSV conversion), `workers/graph-builder` |
 | LLM Gateway | Implemented slice | `services/llm-gateway` |
 | MCP Connector Layer | Implemented scaffold | `mcp-servers/confluence-bridge` |
 | Storage Layer | Implemented MVP | PostgreSQL via Alembic migrations, Qdrant via `packages/vector-client` |
-| Shared Contracts | Implemented | `packages/shared-contracts` |
+| Shared Contracts | Implemented | `packages/shared-contracts` (typed API models, response envelope) |
 
-Audit and human review (Phase 2) are implemented in `services/nexus-api/nexus_api/audit.py` and `review.py`. Knowledge Graph tables and APIs (Phase 4) are implemented through migration `003_add_graph_tables.py`.
+Audit and human review are implemented in `services/nexus-api/nexus_api/audit.py` and `review.py`. Knowledge Graph tables and APIs are implemented through migration `003_add_graph_tables.py`. Correlation ID middleware emits `X-Request-Id` on all responses.
 
 ## Monorepo Structure
 
 Implemented today:
 
 ```text
+apps/
+|-- web-console/                 # React + Vite operational console (search, review, graph, audit, ingest)
+
 services/
-|-- nexus-api/                   # FastAPI ingest, search, audit, review, and graph API
+|-- nexus-api/                   # FastAPI backend with modular routers and JWT auth
+|   |-- nexus_api/routers/       # Domain routers (search, ingest, review, graph, audit, auth, deliberate)
+|   |-- nexus_api/auth/          # JWT token create/decode, auth dependencies, RBAC
 |-- llm-gateway/                 # Model routing, caching, retries, and telemetry slice
 
 workers/
@@ -113,7 +119,7 @@ mcp-servers/
 |-- confluence-bridge/           # Controlled Confluence access scaffold
 
 packages/
-|-- shared-contracts/            # API schemas and shared types
+|-- shared-contracts/            # API schemas, response envelope, and shared types
 |-- vector-client/               # Qdrant client wrapper
 
 infrastructure/
@@ -124,12 +130,8 @@ infrastructure/
 Planned, not yet implemented (create only when the corresponding phase begins; see [action.md](action.md)):
 
 ```text
-apps/
-|-- web-console/                 # Search, graph, ingestion, and review UI (Phase 8)
-
 services/
 |-- api-gateway/                 # Production API boundary and request orchestration
-|-- auth-service/                # Identity, RBAC, and policy checks (Phase 7)
 |-- rule-engine/                 # Workflow routing and model selection
 
 mcp-servers/

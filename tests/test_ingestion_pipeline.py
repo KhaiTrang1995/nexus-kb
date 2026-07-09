@@ -38,7 +38,7 @@ class FakeRepository:
             error_message=error_message,
         )
 
-    def upsert_document(self, document):
+    def upsert_document(self, document, workspace_id=None, uploaded_by=None):
         existing = self.documents_by_path.get(document.source_path)
         if existing and existing.content_hash == document.content_hash:
             return existing, False
@@ -53,6 +53,7 @@ class FakeRepository:
             content_hash=document.content_hash,
             frontmatter=document.frontmatter,
             tags=document.tags,
+            workspace_id=workspace_id,
             wikilinks=document.wikilinks,
         )
         self.documents_by_path[document.source_path] = record

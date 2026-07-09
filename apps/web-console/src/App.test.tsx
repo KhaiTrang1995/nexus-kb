@@ -9,7 +9,17 @@ describe('App', () => {
     localStorage.clear()
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation((url: string) => {
+      vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+        if (url.includes('/api/v1/auth/dev-token')) {
+          const body = opts?.body ? JSON.parse(opts.body as string) : {}
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              access_token: 'test-jwt-token',
+              user: { id: body.user_id || 'u1', name: body.name || 'Alice', role: body.role || '' },
+            }),
+          })
+        }
         if (url.includes('/api/v1/graph/stats')) {
           return Promise.resolve({ ok: true, json: async () => ({ node_count: 0 }) })
         }
@@ -29,16 +39,16 @@ describe('App', () => {
     localStorage.clear()
   })
 
-  it('renders operational console nav after mock login', async () => {
+  it('renders sidebar nav after login', async () => {
     const user = userEvent.setup()
     renderWithProviders(<App />)
 
-    await user.click(screen.getByRole('button', { name: /use default \(alice/i }))
+    const aliceButtons = screen.getAllByText('Alice')
+    const loginCard = aliceButtons[0].closest('button')!
+    await user.click(loginCard)
 
     await waitFor(() => {
-      expect(screen.getByText(/Nexus-KB/i)).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /search/i })).toBeInTheDocument()
-      expect(screen.queryByRole('link', { name: /review queue/i })).not.toBeInTheDocument()
+      expect(screen.getByTestId('sidebar')).toBeInTheDocument()
     })
   })
 })

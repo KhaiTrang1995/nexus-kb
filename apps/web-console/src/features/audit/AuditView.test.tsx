@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AuditView from './AuditView'
-import { renderWithProviders, mockUser } from '../../test/utils'
+import { renderWithProviders } from '../../test/utils'
 
 const auditRecords = [
   {
@@ -25,6 +25,7 @@ const auditRecords = [
 
 describe('AuditView', () => {
   beforeEach(() => {
+    localStorage.setItem('nexus-jwt', 'test-token')
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -35,12 +36,13 @@ describe('AuditView', () => {
   })
 
   afterEach(() => {
+    localStorage.clear()
     vi.unstubAllGlobals()
   })
 
   it('auto-loads audit log on mount and renders table rows with action pills', async () => {
     renderWithProviders(
-      <AuditView canAdvanced={false} currentUser={mockUser.searcher} />,
+      <AuditView canAdvanced={false} />,
     )
 
     expect(screen.getByText('Audit Log')).toBeInTheDocument()
@@ -52,7 +54,10 @@ describe('AuditView', () => {
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/audit?'),
       expect.objectContaining({
-        headers: expect.objectContaining({ 'X-User-Id': 'u1' }),
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-token',
+        }),
       }),
     )
   })
@@ -60,7 +65,7 @@ describe('AuditView', () => {
   it('shows action filter pills and refetches when filter changes', async () => {
     const user = userEvent.setup()
     renderWithProviders(
-      <AuditView canAdvanced={false} currentUser={mockUser.searcher} />,
+      <AuditView canAdvanced={false} />,
     )
 
     await waitFor(() => screen.getByText('SEARCH_QUERY'))
@@ -76,7 +81,7 @@ describe('AuditView', () => {
 
   it('shows actor filter only for Auditor (canAdvanced)', async () => {
     renderWithProviders(
-      <AuditView canAdvanced={true} currentUser={mockUser.auditor} />,
+      <AuditView canAdvanced={true} />,
     )
 
     expect(screen.getByPlaceholderText(/filter by actor/i)).toBeInTheDocument()
@@ -89,7 +94,7 @@ describe('AuditView', () => {
     )
 
     renderWithProviders(
-      <AuditView canAdvanced={false} currentUser={mockUser.searcher} />,
+      <AuditView canAdvanced={false} />,
     )
 
     await waitFor(() => {
@@ -101,7 +106,7 @@ describe('AuditView', () => {
   it('expands row to show details on click', async () => {
     const user = userEvent.setup()
     renderWithProviders(
-      <AuditView canAdvanced={false} currentUser={mockUser.searcher} />,
+      <AuditView canAdvanced={false} />,
     )
 
     await waitFor(() => screen.getByText('SEARCH_QUERY'))

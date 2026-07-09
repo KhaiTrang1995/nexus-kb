@@ -23,7 +23,7 @@
             "collapsed": false,
             "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
             "id": 100,
-            "title": "🔷 TỔNG QUAN CLUSTER",
+            "title": "CLUSTER OVERVIEW",
             "type": "row"
         },
         {
@@ -316,7 +316,7 @@
             "collapsed": false,
             "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
             "id": 101,
-            "title": "📊 COLLECTIONS & VECTORS",
+            "title": "COLLECTIONS & VECTORS",
             "type": "row"
         },
         {
@@ -511,7 +511,7 @@
             "collapsed": false,
             "gridPos": { "h": 1, "w": 24, "x": 0, "y": 11 },
             "id": 102,
-            "title": "⚡ REST API PERFORMANCE",
+            "title": "REST API PERFORMANCE",
             "type": "row"
         },
         {
@@ -771,7 +771,7 @@
             "collapsed": false,
             "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 },
             "id": 103,
-            "title": "💾 MEMORY & RESOURCES",
+            "title": "MEMORY & RESOURCES",
             "type": "row"
         },
         {
@@ -968,7 +968,7 @@
             "collapsed": false,
             "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 },
             "id": 104,
-            "title": "🔄 CLUSTER OPERATIONS & SHARD",
+            "title": "CLUSTER OPERATIONS & SHARD",
             "type": "row"
         },
         {
@@ -1152,7 +1152,7 @@
             "collapsed": false,
             "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 },
             "id": 105,
-            "title": "📈 HARDWARE METRICS (I/O)",
+            "title": "HARDWARE METRICS (I/O)",
             "type": "row"
         },
         {

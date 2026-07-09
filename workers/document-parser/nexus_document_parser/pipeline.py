@@ -7,14 +7,17 @@ from nexus_shared.contracts import AuditStatus, IngestionResponse, IngestionStat
 from nexus_document_parser.chunker import TextChunker
 from nexus_document_parser.embedding import EmbeddingProvider
 from nexus_document_parser.loader import load_documents
-from nexus_document_parser.ports import DocumentLoader, MetadataRepository, VectorIndex
+from nexus_document_parser.ports import DocumentConverter, DocumentLoader, MetadataRepository, VectorIndex
 
 logger = logging.getLogger(__name__)
 
 
 class LocalDocumentLoader:
+    def __init__(self, converter: DocumentConverter | None = None) -> None:
+        self._converter = converter
+
     def load(self, source_path: str, source_type: SourceType):
-        return load_documents(source_path, source_type)
+        return load_documents(source_path, source_type, converter=self._converter)
 
 
 class IngestionPipeline:
@@ -36,7 +39,14 @@ class IngestionPipeline:
         self.confidence_threshold = confidence_threshold
         self.actor_id = actor_id
 
-    def ingest(self, source_path: str, source_type: SourceType) -> IngestionResponse:
+    def ingest(
+        self,
+        source_path: str,
+        source_type: SourceType,
+        target_document_id: UUID | None = None,
+        workspace_id: UUID | None = None,
+        uploaded_by: str | None = None,
+    ) -> IngestionResponse:
         run = self.repository.create_ingestion_run(source_path)
         self._record_audit("INGEST_START", AuditStatus.SUCCESS, run.id, {"source_type": source_type.value})
         documents_seen = 0
@@ -57,7 +67,14 @@ class IngestionPipeline:
                         "content_hash": document.content_hash,
                     },
                 )
-                document_record, changed = self.repository.upsert_document(document)
+                if target_document_id is not None:
+                    document_record, changed = self.repository.upsert_document_version(
+                        target_document_id, document, uploaded_by=uploaded_by
+                    )
+                else:
+                    document_record, changed = self.repository.upsert_document(
+                        document, workspace_id=workspace_id, uploaded_by=uploaded_by
+                    )
                 if not changed:
                     continue
 
@@ -98,6 +115,7 @@ class IngestionPipeline:
                         chunk_index=chunk.chunk_index,
                         heading_path=list(chunk.metadata.get("heading_path") or []),
                         section_title=chunk.metadata.get("section_title"),
+                        workspace_id=str(document_record.workspace_id) if document_record.workspace_id else None,
                     )
                     if confidence < self.confidence_threshold:
                         self.repository.create_review_item(

@@ -10,6 +10,7 @@ for relative in [
     "workers/document-parser",
     "services/nexus-api",
     "mcp-servers/confluence-bridge",
+    "mcp-servers/nexus-knowledge",
     "workers/graph-builder",
     "services/llm-gateway",
 ]:

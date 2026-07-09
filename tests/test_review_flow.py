@@ -54,7 +54,7 @@ class ReviewRepository:
             error_message=error_message,
         )
 
-    def upsert_document(self, document: ParsedDocument):
+    def upsert_document(self, document: ParsedDocument, workspace_id=None, uploaded_by=None):
         return (
             DocumentRecord(
                 id=self.document_id,

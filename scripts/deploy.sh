@@ -13,10 +13,10 @@ set -euo pipefail
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'
 RED='\033[0;31m'; NC='\033[0m'; BOLD='\033[1m'
 
-log_step() { echo -e "\n${CYAN}${BOLD}▶ $1${NC}"; }
-log_ok()   { echo -e "${GREEN}✔ $1${NC}"; }
-log_warn() { echo -e "${YELLOW}⚠ $1${NC}"; }
-log_err()  { echo -e "${RED}✘ $1${NC}"; exit 1; }
+log_step() { echo -e "\n${CYAN}${BOLD}[STEP] $1${NC}"; }
+log_ok()   { echo -e "${GREEN}[OK] $1${NC}"; }
+log_warn() { echo -e "${YELLOW}[WARN] $1${NC}"; }
+log_err()  { echo -e "${RED}[ERR] $1${NC}"; exit 1; }
 
 # ── Parse flags ───────────────────────────────────────────────────────────────
 SKIP_UI=false
@@ -137,7 +137,7 @@ if ! $SKIP_UI; then
   npm install --silent
   npm run build --silent
   popd > /dev/null
-  log_ok "Web console built → apps/web-console/dist/"
+  log_ok "Web console built: apps/web-console/dist/"
 fi
 
 # ── Start API ─────────────────────────────────────────────────────────────────

@@ -13,6 +13,6 @@
     },
     "model": "claude-sonnet-4-5",
     "hooks": {
-        "pre_tool_use": ".claude/hooks/validate-bash.sh"
+        "PreToolUse": ".claude/hooks/validate-bash.sh"
     }
 }
