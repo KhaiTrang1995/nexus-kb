@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import SearchView from './SearchView'
-import { renderWithProviders, mockUser } from '../../test/utils'
+import { renderWithProviders } from '../../test/utils'
 
 const entityA = {
   id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -74,7 +74,7 @@ describe('SearchView graph panel', () => {
 
   it('renders search results and opens graph panel with entity badges grouped by type', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<SearchView currentUser={mockUser.searcher} />)
+    renderWithProviders(<SearchView />)
 
     await waitFor(() => {
       expect(screen.getByText('Governed Retrieval Guide')).toBeInTheDocument()
@@ -93,7 +93,7 @@ describe('SearchView graph panel', () => {
 
   it('renders readable relationship arrows with entity names and confidence', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<SearchView currentUser={mockUser.searcher} />)
+    renderWithProviders(<SearchView />)
 
     await waitFor(() => screen.getByText('Governed Retrieval Guide'))
     await user.click(screen.getByText('Governed Retrieval Guide'))
@@ -105,7 +105,7 @@ describe('SearchView graph panel', () => {
   })
 
   it('shows graph node count from /api/v1/graph/stats in stats bar', async () => {
-    renderWithProviders(<SearchView currentUser={mockUser.searcher} />)
+    renderWithProviders(<SearchView />)
 
     await waitFor(() => {
       expect(screen.getByText('Graph nodes')).toBeInTheDocument()
@@ -124,7 +124,7 @@ describe('SearchView graph panel', () => {
       }),
     )
 
-    renderWithProviders(<SearchView currentUser={mockUser.searcher} />)
+    renderWithProviders(<SearchView />)
 
     await waitFor(() => {
       expect(screen.getByText(/Search failed: 500/i)).toBeInTheDocument()

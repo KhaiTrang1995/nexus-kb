@@ -44,11 +44,22 @@ const DAMPING = 0.82
 const ALPHA = 0.08
 const PULL = 0.012
 
-export default function GraphCanvas({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
+export default function GraphCanvas({
+  nodes,
+  edges,
+  onNodeClick,
+  highlightNodeId,
+}: {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  onNodeClick?: (node: GraphNode) => void
+  highlightNodeId?: string | null
+}) {
   const [positions, setPositions] = useState<Record<string, NodePos>>(() => initPositions(nodes))
   const [tooltip, setTooltip] = useState<{ node: GraphNode; x: number; y: number } | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
   const dragOffset = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 })
+  const dragMoved = useRef<boolean>(false)
   const rafRef = useRef<number>(0)
   const posRef = useRef(positions)
   posRef.current = positions
@@ -143,11 +154,13 @@ export default function GraphCanvas({ nodes, edges }: { nodes: GraphNode[]; edge
     const mx = (e.clientX - svgRect.left) * (W / svgRect.width)
     const my = (e.clientY - svgRect.top) * (H / svgRect.height)
     dragOffset.current = { dx: p.x - mx, dy: p.y - my }
+    dragMoved.current = false
     setDragging(id)
   }, [])
 
   const onMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!dragging) return
+    dragMoved.current = true
     const svgRect = e.currentTarget.getBoundingClientRect()
     const mx = (e.clientX - svgRect.left) * (W / svgRect.width)
     const my = (e.clientY - svgRect.top) * (H / svgRect.height)
@@ -159,7 +172,14 @@ export default function GraphCanvas({ nodes, edges }: { nodes: GraphNode[]; edge
     })
   }, [dragging])
 
-  const onMouseUp = useCallback(() => setDragging(null), [])
+  const onMouseUp = useCallback(() => {
+    // A mouseup without any movement in between is a click, not a drag.
+    if (dragging && !dragMoved.current && onNodeClick) {
+      const node = nodes.find(n => n.id === dragging)
+      if (node) onNodeClick(node)
+    }
+    setDragging(null)
+  }, [dragging, nodes, onNodeClick])
 
   if (nodes.length === 0) {
     return (
@@ -219,8 +239,8 @@ export default function GraphCanvas({ nodes, edges }: { nodes: GraphNode[]; edge
                 <circle
                   cx={p.x} cy={p.y} r={NODE_R}
                   fill={color} fillOpacity={0.85}
-                  stroke={dragging === n.id ? '#fff' : color}
-                  strokeWidth={dragging === n.id ? 2 : 0.5}
+                  stroke={dragging === n.id || highlightNodeId === n.id ? '#fff' : color}
+                  strokeWidth={dragging === n.id || highlightNodeId === n.id ? 2.5 : 0.5}
                 />
                 <text
                   x={p.x} y={p.y + NODE_R + 11}

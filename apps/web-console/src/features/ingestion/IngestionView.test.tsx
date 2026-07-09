@@ -15,6 +15,7 @@ const ingestResult = {
 
 describe('IngestionView', () => {
   beforeEach(() => {
+    localStorage.setItem('nexus-jwt', 'test-token')
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -25,6 +26,7 @@ describe('IngestionView', () => {
   })
 
   afterEach(() => {
+    localStorage.clear()
     vi.unstubAllGlobals()
   })
 
@@ -43,8 +45,7 @@ describe('IngestionView', () => {
           method: 'POST',
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            'X-User-Role': 'Reviewer',
-            'X-User-Id': 'u2',
+            'Authorization': 'Bearer test-token',
           }),
           body: JSON.stringify({
             source_path: 'D:\\docs\\vault',
@@ -66,7 +67,7 @@ describe('IngestionView', () => {
       expect(screen.getByText('COMPLETED')).toBeInTheDocument()
       expect(screen.getByText(/Documents seen/i)).toBeInTheDocument()
       expect(screen.getByText('Indexed')).toBeInTheDocument()
-      expect(screen.getByText('Chunks')).toBeInTheDocument()
+      expect(screen.getAllByText('Chunks').length).toBeGreaterThanOrEqual(1)
       const metrics = screen.getAllByText('12')
       expect(metrics.length).toBeGreaterThanOrEqual(1)
     })

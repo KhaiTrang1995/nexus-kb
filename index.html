@@ -12,9 +12,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <!-- FontAwesome for Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
   <!-- CSS Styles -->
   <style>
     :root {
@@ -402,18 +399,6 @@
       border-color: var(--border-hover);
       transform: translateY(-4px);
       box-shadow: 0 16px 32px rgba(99, 102, 241, 0.12);
-    }
-
-    .card-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: rgba(99, 102, 241, 0.08);
-      display: grid;
-      place-items: center;
-      color: var(--secondary);
-      font-size: 1.2rem;
-      margin-bottom: 20px;
     }
 
     .card h3 {
@@ -805,7 +790,7 @@
         <a href="#features" class="nav-link">Features</a>
         <a href="#setup" class="nav-link">Getting Started</a>
         <a href="#docs" class="nav-link">Documentation Hub</a>
-        <a href="https://github.com/KhaiTrang1995/nexus-kb" class="nav-btn"><i class="fab fa-github"></i> GitHub</a>
+        <a href="https://github.com/KhaiTrang1995/nexus-kb" class="nav-btn">GitHub</a>
       </nav>
     </div>
   </header>
@@ -813,13 +798,13 @@
   <main>
     <!-- Hero Section -->
     <section class="hero">
-      <div class="hero-badge">PHASES 1-7 COMPLETE — LOCAL MVP + WEB CONSOLE + LLM EXTRACTION</div>
+      <div class="hero-badge">PHASE 8 — KNOWLEDGE HUB: MULTI-FORMAT UPLOAD, WORKSPACE RBAC, RAG CHAT, MCP SERVER</div>
       <h1>Enterprise RAG &<br><span style="background: linear-gradient(135deg, var(--accent), var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent;">Knowledge Graph Engine</span></h1>
-      <p>An open-source reference architecture for building secure, permission-aware vector search pipelines, document parsing, and structured entity graphs.</p>
+      <p>An open-source reference architecture for building secure, permission-aware RAG and Knowledge Graph platforms: multi-format ingestion, workspace-scoped RBAC, a two-tier review gate, a Confluence connector, a RAG chatbot, and a read-only MCP server for AI agents.</p>
       
       <div class="hero-buttons">
-        <a href="#setup" class="btn btn-primary"><i class="fas fa-play"></i> Start Building</a>
-        <a href="#docs" class="btn btn-secondary"><i class="fas fa-book"></i> Read Governance Docs</a>
+        <a href="#setup" class="btn btn-primary">Start Building</a>
+        <a href="#docs" class="btn btn-secondary">Read Governance Docs</a>
       </div>
 
       <!-- Terminal Simulator -->
@@ -863,44 +848,62 @@
       <div class="grid">
         <!-- Card 1 -->
         <div class="card">
-          <div class="card-icon"><i class="fas fa-file-invoice"></i></div>
           <h3>Obsidian Ingestion</h3>
           <p>Extracts YAML metadata, wiki-style links (`[[InternalLink]]`), and markdown tags. Prepares rich seeds for building relation graphs in future stages.</p>
         </div>
 
         <!-- Card 2 -->
         <div class="card">
-          <div class="card-icon"><i class="fas fa-database"></i></div>
           <h3>Dual-Store Architecture</h3>
           <p>Structured document logs, metadata records, and audit paths are persisted in PostgreSQL, while vector coordinates reside in Qdrant.</p>
         </div>
 
         <!-- Card 3 -->
         <div class="card">
-          <div class="card-icon"><i class="fas fa-search"></i></div>
           <h3>Hybrid Reranking</h3>
           <p>Search retrievals combine vector cosine similarity with metadata filters (tags, directories) and title-heading text scoring for precise answers.</p>
         </div>
 
         <!-- Card 4 -->
         <div class="card">
-          <div class="card-icon"><i class="fas fa-history"></i></div>
           <h3>Alembic Database Versioning</h3>
           <p>Full support for SQLAlchemy ORM and database versioning. Schema adjustments are managed dynamically through SQL version paths.</p>
         </div>
 
         <!-- Card 5 -->
         <div class="card">
-          <div class="card-icon"><i class="fas fa-shield-halved"></i></div>
           <h3>Governed AI Workflows</h3>
           <p>Configured with robust repo boundaries. Code templates, CI/CD scripts, and agent rules prevent leakages of raw customer logs or secrets.</p>
         </div>
 
         <!-- Card 6 -->
         <div class="card">
-          <div class="card-icon"><i class="fas fa-cubes"></i></div>
           <h3>HA Vector Demo</h3>
           <p>Includes a runnable multi-node Qdrant cluster compose file equipped with Prometheus monitoring dashboards for validating network workloads.</p>
+        </div>
+
+        <!-- Card 7 -->
+        <div class="card">
+          <h3>Multi-Format Upload Queue</h3>
+          <p>Upload PDF, DOCX, XLSX, PPTX, CSV, or HTML through the console. Files convert via <code>markitdown</code> and flow through an async, retryable, Postgres-backed FIFO queue with duplicate detection and versioning.</p>
+        </div>
+
+        <!-- Card 8 -->
+        <div class="card">
+          <h3>Workspace RBAC</h3>
+          <p>Fail-closed, workspace-scoped access across search, upload, and chat. Admins bypass filtering; members with no workspace membership see nothing -- never "everything" by accident.</p>
+        </div>
+
+        <!-- Card 9 -->
+        <div class="card">
+          <h3>RAG Chatbot + MCP Server</h3>
+          <p>Ask questions answered from the indexed knowledge base with citations, backed by any OpenAI-compatible LLM. A read-only MCP server exposes the same search/ask tools to AI agents via an MCP Gateway.</p>
+        </div>
+
+        <!-- Card 10 -->
+        <div class="card">
+          <h3>Interactive Graph Explorer</h3>
+          <p>Search entities by name, click a node to load its source document, and expand neighbors -- without re-running extraction just to look at the current graph.</p>
         </div>
       </div>
     </section>
@@ -925,7 +928,7 @@
             <p>Initialize your Python environment and install the required packages:</p>
             <div class="code-block">
               <span class="code-text">python -m venv .venv; .venv\Scripts\Activate.ps1; pip install -r requirements.txt</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
 
@@ -934,7 +937,7 @@
             <p>Spin up local PostgreSQL and Qdrant containers in the background:</p>
             <div class="code-block">
               <span class="code-text">docker compose up -d</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
 
@@ -943,7 +946,7 @@
             <p>Migrate the schema schema head using Alembic:</p>
             <div class="code-block">
               <span class="code-text">alembic -c infrastructure/alembic.ini upgrade head</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
 
@@ -952,7 +955,7 @@
             <p>Initialize environment variables and start the server:</p>
             <div class="code-block">
               <span class="code-text">$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;services/nexus-api"; uvicorn nexus_api.main:app --reload</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -964,7 +967,7 @@
             <p>Initialize your Python environment and install the required packages:</p>
             <div class="code-block">
               <span class="code-text">python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
 
@@ -973,7 +976,7 @@
             <p>Spin up local PostgreSQL and Qdrant containers in the background:</p>
             <div class="code-block">
               <span class="code-text">docker compose up -d</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
 
@@ -982,7 +985,7 @@
             <p>Migrate the database schema using Alembic:</p>
             <div class="code-block">
               <span class="code-text">alembic -c infrastructure/alembic.ini upgrade head</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
 
@@ -991,7 +994,7 @@
             <p>Initialize environment variables and start the server:</p>
             <div class="code-block">
               <span class="code-text">export PYTHONPATH="packages/shared-contracts:packages/vector-client:workers/document-parser:services/nexus-api" && uvicorn nexus_api.main:app --reload</span>
-              <button class="code-copy-btn" onclick="copyCode(this)"><i class="far fa-copy"></i></button>
+              <button class="code-copy-btn" onclick="copyCode(this)">Copy</button>
             </div>
           </div>
         </div>
@@ -1009,9 +1012,9 @@
         <!-- Sidebar Navigation -->
         <div class="docs-sidebar">
           <div class="docs-sidebar-header">Governance & Policy</div>
-          <button class="docs-menu-btn active" onclick="switchDocTab(this, 'agent-guide')"><i class="fas fa-robot"></i> Agent Guide</button>
-          <button class="docs-menu-btn" onclick="switchDocTab(this, 'contributing')"><i class="fas fa-hands-helping"></i> Contributing</button>
-          <button class="docs-menu-btn" onclick="switchDocTab(this, 'security')"><i class="fas fa-user-shield"></i> Security Policy</button>
+          <button class="docs-menu-btn active" onclick="switchDocTab(this, 'agent-guide')">Agent Guide</button>
+          <button class="docs-menu-btn" onclick="switchDocTab(this, 'contributing')">Contributing</button>
+          <button class="docs-menu-btn" onclick="switchDocTab(this, 'security')">Security Policy</button>
         </div>
 
         <!-- Document Body Panel -->
@@ -1268,12 +1271,11 @@
       const codeSpan = btn.parentNode.querySelector('.code-text');
       const text = codeSpan.textContent;
       navigator.clipboard.writeText(text).then(() => {
-        const icon = btn.querySelector('i');
-        icon.className = 'fas fa-check';
-        icon.style.color = '#10b981';
+        btn.textContent = 'Copied';
+        btn.style.color = '#10b981';
         setTimeout(() => {
-          icon.className = 'far fa-copy';
-          icon.style.color = '';
+          btn.textContent = 'Copy';
+          btn.style.color = '';
         }, 1500);
       });
     }

@@ -58,15 +58,37 @@ class NexusVectorClient:
             logger.exception("failed to upsert %s chunks into Qdrant", len(qdrant_points))
             raise
 
+    def set_payload(self, point_ids: list[UUID], payload: dict[str, Any]) -> None:
+        """Metadata-only update (e.g. flipping `published`) -- no re-embedding needed."""
+        if not point_ids:
+            return
+        self.ensure_collection()
+        try:
+            self.client.set_payload(
+                collection_name=self.collection_name,
+                payload=payload,
+                points=[str(point_id) for point_id in point_ids],
+            )
+        except Exception:
+            logger.exception("failed to set payload for %s points in %s", len(point_ids), self.collection_name)
+            raise
+
     def search(
         self,
         vector: list[float],
         limit: int = 10,
         tags: list[str] | None = None,
         source_type: SourceType | None = None,
+        workspace_ids: list[str] | None = None,
+        require_published: bool = False,
     ) -> list[dict[str, Any]]:
         self.ensure_collection()
-        query_filter = build_search_filter(tags=tags or [], source_type=source_type)
+        query_filter = build_search_filter(
+            tags=tags or [],
+            source_type=source_type,
+            workspace_ids=workspace_ids,
+            require_published=require_published,
+        )
         try:
             results = self.client.query_points(
                 collection_name=self.collection_name,
@@ -88,12 +110,25 @@ class NexusVectorClient:
         ]
 
 
-def build_search_filter(tags: list[str], source_type: SourceType | None) -> Filter | None:
+def build_search_filter(
+    tags: list[str],
+    source_type: SourceType | None,
+    workspace_ids: list[str] | None = None,
+    require_published: bool = False,
+) -> Filter | None:
     conditions: list[FieldCondition] = []
     if tags:
         conditions.append(FieldCondition(key="tags", match=MatchAny(any=tags)))
     if source_type is not None:
         conditions.append(FieldCondition(key="source_type", match=MatchValue(value=source_type.value)))
+    if workspace_ids is not None:
+        # Explicit empty list means "no workspace access" -- must match nothing, not everything.
+        conditions.append(FieldCondition(key="workspace_id", match=MatchAny(any=workspace_ids)))
+    if require_published:
+        # Opt-in: the graph module's raw vector_client.search() calls use a
+        # different collection/payload shape without a `published` field, so
+        # this must never be applied unconditionally.
+        conditions.append(FieldCondition(key="published", match=MatchValue(value=True)))
     if not conditions:
         return None
     return Filter(must=conditions)

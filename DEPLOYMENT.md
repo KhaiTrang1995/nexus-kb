@@ -4,7 +4,7 @@ Complete guide for deploying Nexus-KB in production using Docker.
 
 ## Overview
 
-**Stack**: PostgreSQL 16 + Qdrant + FastAPI + React/Nginx
+**Stack**: PostgreSQL 16 + Qdrant + FastAPI (`api`) + FIFO ingestion worker (`worker`) + React/Nginx (`web`)
 
 **Single Command Start**:
 ```bash
@@ -22,7 +22,7 @@ That's it. All services auto-start, healthchecks run, migrations apply, and you'
 
 ## Environment Setup
 
-Copy `.env.example` → `.env`:
+Copy `.env.example` to `.env`:
 
 ```bash
 cp .env.example .env
@@ -68,8 +68,12 @@ NAME                  STATUS
 nexus-kb-postgres     Up (healthy)
 nexus-kb-qdrant       Up (healthy)
 nexus-kb-api          Up (healthy)
+nexus-kb-worker       Up
 nexus-kb-web          Up (healthy)
 ```
+
+`worker` has no HTTP healthcheck (it's a queue consumer, not a server) -- verify it's alive with
+`docker compose -f docker-compose.prod.yml logs -f worker` instead of `ps --health`.
 
 ### 3. Verify Health
 
@@ -88,13 +92,32 @@ open http://localhost:3000
 ### 4. Init Data (Optional)
 
 ```bash
-# Seed demo documents
+# Seed demo documents (Phase 1 CLI scan, admin-run, no workspace)
 docker exec nexus-kb-api python -m nexus_document_parser.cli /app/data/samples --source-type local
 
 # Or ingest from local path
 docker exec -it nexus-kb-api bash
 $ cd /app && python -m nexus_document_parser.cli /path/to/vault --source-type obsidian
 ```
+
+For the web console's **Upload Files** flow (`POST /api/v1/documents`), an admin must first
+create at least one workspace and add users to it -- uploads are workspace-scoped and fail
+closed with zero visibility until that's done:
+
+```bash
+# Mint an admin dev-token (AUTH_MODE=jwt in prod requires a real login instead; see Security)
+curl -X POST http://localhost:8000/api/v1/auth/dev-token \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"admin","name":"Admin","role":"Auditor","is_admin":true}'
+
+# Create a workspace (use the access_token from the response above)
+curl -X POST http://localhost:8000/api/v1/workspaces \
+  -H "Authorization: Bearer <access_token>" -H "Content-Type: application/json" \
+  -d '{"name":"Engineering","slug":"engineering"}'
+```
+
+Uploaded/synced files only get processed if the `worker` container is running -- check
+`docker compose -f docker-compose.prod.yml logs -f worker` if jobs stay `queued`.
 
 ## Managing Services
 
@@ -304,7 +327,7 @@ CMD ["uvicorn", "nexus_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--
 
 ## Monitoring Checklist
 
-- [ ] All 4 containers show `(healthy)` status
+- [ ] All 4 containers with healthchecks (`postgres`, `qdrant`, `api`, `web`) show `(healthy)`; `worker` shows `Up` and its logs show poll activity, not repeated tracebacks
 - [ ] API responds to `GET /health` in < 100ms
 - [ ] Web console loads without JS errors (F12)
 - [ ] Database has documents/chunks ingested

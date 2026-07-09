@@ -22,9 +22,14 @@ class SearchService:
         self.embedding_provider = embedding_provider
         self.graph_repository = graph_repository
 
-    def search(self, request: SearchRequest) -> SearchResponse:
+    def search(
+        self,
+        request: SearchRequest,
+        actor_id: str = "system:search",
+        workspace_ids: list[str] | None = None,
+    ) -> SearchResponse:
         self.repository.record_audit_log(
-            actor_id="system:search",
+            actor_id=actor_id,
             action="SEARCH_QUERY",
             status=AuditStatus.SUCCESS,
             details={"query": request.query, "limit": request.limit, "tags": request.tags},
@@ -36,6 +41,8 @@ class SearchService:
             limit=vector_limit,
             tags=request.tags,
             source_type=request.source_type,
+            workspace_ids=workspace_ids,
+            require_published=True,
         )
         results: list[SearchResult] = []
         for item in vector_results:
@@ -78,6 +85,7 @@ class SearchService:
                     frontmatter=dict(row["frontmatter"] or {}),
                     graph_entities=graph.entities,
                     graph_relationships=graph.relationships,
+                    document_version=row.get("document_version"),
                 )
             )
         results.sort(key=lambda result: result.rank_score, reverse=True)

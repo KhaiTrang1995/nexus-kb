@@ -177,6 +177,70 @@ class SQLAlchemyGraphRepository:
             )
             return [graph_relationship_record(model) for model in session.execute(statement).scalars()]
 
+    def list_entities(self, limit: int = 200, entity_type: str | None = None) -> list[GraphEntityRecord]:
+        from sqlalchemy import desc, select
+
+        from nexus_document_parser.db_models import GraphEntityModel
+
+        with self.session_scope() as session:
+            statement = select(GraphEntityModel)
+            if entity_type is not None:
+                statement = statement.where(GraphEntityModel.entity_type == entity_type)
+            statement = statement.order_by(desc(GraphEntityModel.confidence)).limit(max(1, min(limit, 1000)))
+            return [graph_entity_record(model) for model in session.execute(statement).scalars()]
+
+    def search_entities(self, query: str, limit: int = 20) -> list[GraphEntityRecord]:
+        from sqlalchemy import select
+
+        from nexus_document_parser.db_models import GraphEntityModel
+
+        pattern = f"%{query.strip().lower()}%"
+        with self.session_scope() as session:
+            statement = (
+                select(GraphEntityModel)
+                .where(GraphEntityModel.normalized_name.ilike(pattern))
+                .order_by(GraphEntityModel.name)
+                .limit(max(1, min(limit, 100)))
+            )
+            return [graph_entity_record(model) for model in session.execute(statement).scalars()]
+
+    def list_relationships_among(self, entity_ids: list[UUID]) -> list[GraphRelationshipRecord]:
+        from sqlalchemy import select
+
+        from nexus_document_parser.db_models import GraphRelationshipModel
+
+        if not entity_ids:
+            return []
+        with self.session_scope() as session:
+            statement = select(GraphRelationshipModel).where(
+                GraphRelationshipModel.source_entity_id.in_(entity_ids),
+                GraphRelationshipModel.target_entity_id.in_(entity_ids),
+            )
+            return [graph_relationship_record(model) for model in session.execute(statement).scalars()]
+
+    def get_entity(self, entity_id: UUID) -> GraphEntityRecord | None:
+        from nexus_document_parser.db_models import GraphEntityModel
+
+        with self.session_scope() as session:
+            model = session.get(GraphEntityModel, entity_id)
+            return None if model is None else graph_entity_record(model)
+
+    def get_entity_neighbors(self, entity_id: UUID) -> tuple[list[GraphEntityRecord], list[GraphRelationshipRecord]]:
+        relationships = self.related_to_entity(entity_id)
+        neighbor_ids = {entity_id}
+        for relationship in relationships:
+            neighbor_ids.add(relationship.source_entity_id)
+            neighbor_ids.add(relationship.target_entity_id)
+
+        from sqlalchemy import select
+
+        from nexus_document_parser.db_models import GraphEntityModel
+
+        with self.session_scope() as session:
+            statement = select(GraphEntityModel).where(GraphEntityModel.id.in_(neighbor_ids))
+            entities = [graph_entity_record(model) for model in session.execute(statement).scalars()]
+        return entities, relationships
+
     def graph_for_chunk(self, chunk_id: UUID) -> GraphBuildResult:
         from sqlalchemy import text
 

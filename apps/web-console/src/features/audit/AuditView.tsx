@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+import { authHeaders } from '../../lib/auth'
 
 interface AuditRecord {
   id: string
   actor_id: string
   action: string
   status: string
-  details: Record<string, any>
+  details: Record<string, unknown>
   created_at: string | null
 }
 
@@ -37,7 +38,7 @@ function ActionPill({ action }: { action: string }) {
 }
 
 function relativeTime(iso: string | null): string {
-  if (!iso) return '—'
+  if (!iso) return '--'
   const diff = Date.now() - new Date(iso).getTime()
   if (diff < 60_000) return `${Math.floor(diff / 1000)}s ago`
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
@@ -47,10 +48,8 @@ function relativeTime(iso: string | null): string {
 
 export default function AuditView({
   canAdvanced,
-  currentUser,
 }: {
   canAdvanced: boolean
-  currentUser: { id: string; name: string; role: string } | null
 }) {
   const [records, setRecords] = useState<AuditRecord[]>([])
   const [loading, setLoading] = useState(false)
@@ -60,9 +59,6 @@ export default function AuditView({
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
-
-  const role = currentUser?.role || ''
-  const userId = currentUser?.id || 'anonymous'
 
   const fetchAudit = useCallback(async (pageOffset: number) => {
     setLoading(true)
@@ -74,23 +70,19 @@ export default function AuditView({
     if (actionFilter !== 'ALL') params.set('action_filter', actionFilter)
     if (actorFilter.trim()) params.set('actor_filter', actorFilter.trim())
 
-    const headers: Record<string, string> = {}
-    if (role) headers['X-User-Role'] = role
-    if (userId) headers['X-User-Id'] = userId
-
     try {
-      const res = await fetch(`/api/v1/audit?${params}`, { headers })
+      const res = await fetch(`/api/v1/audit?${params}`, { headers: authHeaders() })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data: AuditRecord[] = await res.json()
       setHasMore(data.length > PAGE_SIZE)
       setRecords(data.slice(0, PAGE_SIZE))
       setOffset(pageOffset)
-    } catch (e: any) {
-      setError(e.message || 'Failed to load audit log')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load audit log')
     } finally {
       setLoading(false)
     }
-  }, [actionFilter, actorFilter, role, userId])
+  }, [actionFilter, actorFilter])
 
   useEffect(() => {
     fetchAudit(0)
@@ -99,17 +91,17 @@ export default function AuditView({
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-semibold">Audit Log</h1>
+        <h1 className="text-xl font-semibold">Audit Log</h1>
         <button
           onClick={() => fetchAudit(offset)}
           disabled={loading}
           className="kb-btn border border-kb-primary/30 text-xs px-2 py-1"
         >
-          {loading ? 'Loading…' : 'Refresh'}
+          {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
-      <p className="text-kb-muted text-sm mb-4">
-        Immutable events — no raw document content stored.
+      <p className="text-kb-muted text-xs mb-4">
+        Immutable events.
         {!canAdvanced && (
           <span className="ml-2 text-amber-400/70">(Auditor role enables actor filtering)</span>
         )}
@@ -120,7 +112,7 @@ export default function AuditView({
         <div>
           <label className="text-xs text-kb-muted block mb-1">Action type</label>
           <div className="flex flex-wrap gap-1">
-            {ACTION_TYPES.map((a) => (
+            {ACTION_TYPES.map(a => (
               <button
                 key={a}
                 onClick={() => setActionFilter(a)}
@@ -141,8 +133,8 @@ export default function AuditView({
             <label className="text-xs text-kb-muted block mb-1">Actor</label>
             <input
               value={actorFilter}
-              onChange={(e) => setActorFilter(e.target.value)}
-              placeholder="filter by actor…"
+              onChange={e => setActorFilter(e.target.value)}
+              placeholder="filter by actor..."
               className="bg-kb-dark border border-kb-primary/30 rounded px-2 py-1 text-xs w-40 focus:outline-none focus:border-kb-primary"
             />
           </div>
@@ -171,7 +163,7 @@ export default function AuditView({
           <tbody>
             {loading && records.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center text-kb-muted py-8 text-sm">Loading…</td>
+                <td colSpan={5} className="text-center text-kb-muted py-8 text-sm">Loading...</td>
               </tr>
             )}
             {!loading && records.length === 0 && (
@@ -182,58 +174,56 @@ export default function AuditView({
                 </td>
               </tr>
             )}
-            {records.map((rec) => (
-              <>
-                <tr
-                  key={rec.id}
-                  onClick={() => setExpanded(expanded === rec.id ? null : rec.id)}
-                  className="border-b border-kb-primary/10 hover:bg-white/[0.02] cursor-pointer"
-                >
-                  <td className="px-3 py-2 text-xs text-kb-muted whitespace-nowrap">
-                    {relativeTime(rec.created_at)}
-                  </td>
-                  <td className="px-3 py-2 text-xs font-mono truncate max-w-[7rem]" title={rec.actor_id}>
-                    {rec.actor_id}
-                  </td>
-                  <td className="px-3 py-2">
-                    <ActionPill action={rec.action} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                      rec.status === 'SUCCESS' || rec.status === 'success'
-                        ? 'bg-green-500/15 text-green-300'
-                        : 'bg-red-500/15 text-red-300'
-                    }`}>
-                      {rec.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-kb-muted text-[10px]">
-                    {expanded === rec.id ? '▲' : '▼'}
-                  </td>
-                </tr>
-                {expanded === rec.id && (
-                  <tr key={`${rec.id}-detail`} className="bg-black/20">
-                    <td colSpan={5} className="px-4 py-3">
-                      <div className="text-[10px] text-kb-muted mb-2 font-mono">
-                        {rec.created_at && new Date(rec.created_at).toLocaleString()}
-                        <span className="ml-3 opacity-50">{rec.id}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(rec.details || {}).map(([k, v]) => (
-                          <span key={k} className="text-[10px] bg-kb-surface rounded px-2 py-0.5 text-kb-muted border border-kb-primary/10">
-                            <span className="text-kb-primary">{k}</span>
-                            {': '}
-                            {String(v).slice(0, 100)}
-                          </span>
-                        ))}
-                        {Object.keys(rec.details || {}).length === 0 && (
-                          <span className="text-[10px] text-kb-muted italic">no details</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
+            {records.map(rec => (
+              <tr
+                key={rec.id}
+                onClick={() => setExpanded(expanded === rec.id ? null : rec.id)}
+                className="border-b border-kb-primary/10 hover:bg-white/[0.02] cursor-pointer"
+              >
+                <td className="px-3 py-2 text-xs text-kb-muted whitespace-nowrap">
+                  {relativeTime(rec.created_at)}
+                </td>
+                <td className="px-3 py-2 text-xs font-mono truncate max-w-[7rem]" title={rec.actor_id}>
+                  {rec.actor_id}
+                </td>
+                <td className="px-3 py-2">
+                  <ActionPill action={rec.action} />
+                </td>
+                <td className="px-3 py-2">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    rec.status === 'SUCCESS' || rec.status === 'success'
+                      ? 'bg-green-500/15 text-green-300'
+                      : 'bg-red-500/15 text-red-300'
+                  }`}>
+                    {rec.status}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-kb-muted text-[10px]">
+                  {expanded === rec.id ? 'Hide' : 'Show'}
+                </td>
+              </tr>
+            ))}
+            {expanded && records.filter(r => r.id === expanded).map(rec => (
+              <tr key={`${rec.id}-detail`} className="bg-black/20">
+                <td colSpan={5} className="px-4 py-3">
+                  <div className="text-[10px] text-kb-muted mb-2 font-mono">
+                    {rec.created_at && new Date(rec.created_at).toLocaleString()}
+                    <span className="ml-3 opacity-50">{rec.id}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(rec.details || {}).map(([k, v]) => (
+                      <span key={k} className="text-[10px] bg-kb-surface rounded px-2 py-0.5 text-kb-muted border border-kb-primary/10">
+                        <span className="text-kb-primary">{k}</span>
+                        {': '}
+                        {String(v).slice(0, 100)}
+                      </span>
+                    ))}
+                    {Object.keys(rec.details || {}).length === 0 && (
+                      <span className="text-[10px] text-kb-muted italic">no details</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -247,7 +237,7 @@ export default function AuditView({
             disabled={offset === 0 || loading}
             className="kb-btn border border-kb-primary/30 text-xs px-3 py-1 disabled:opacity-40"
           >
-            ← Prev
+            Prev
           </button>
           <span className="text-xs text-kb-muted">Page {Math.floor(offset / PAGE_SIZE) + 1}</span>
           <button
@@ -255,7 +245,7 @@ export default function AuditView({
             disabled={!hasMore || loading}
             className="kb-btn border border-kb-primary/30 text-xs px-3 py-1 disabled:opacity-40"
           >
-            Next →
+            Next
           </button>
         </div>
       )}

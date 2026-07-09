@@ -26,9 +26,12 @@ class FakeVectorClient:
     def __init__(self, results) -> None:
         self.results = results
         self.received_tags = None
+        self.received_workspace_ids = None
 
-    def search(self, vector, limit=10, tags=None, source_type=None):
+    def search(self, vector, limit=10, tags=None, source_type=None, workspace_ids=None, require_published=False):
         self.received_tags = tags
+        self.received_workspace_ids = workspace_ids
+        self.received_require_published = require_published
         return self.results
 
 
@@ -58,6 +61,7 @@ class SearchServiceTest(unittest.TestCase):
             "tags": ["rag"],
             "wikilinks": ["Graph"],
             "frontmatter": {"owner": "platform"},
+            "document_version": 3,
         }
         vector_client = FakeVectorClient(
             [
@@ -88,6 +92,7 @@ class SearchServiceTest(unittest.TestCase):
         self.assertIn("governed retrieval", result.snippet)
         self.assertEqual(result.heading_path, ["Platform", "Retrieval"])
         self.assertEqual(result.section_title, "Retrieval")
+        self.assertEqual(result.document_version, 3)
         self.assertEqual(result.frontmatter["owner"], "platform")
 
     def test_search_result_includes_graph_lookup_for_matched_chunk(self) -> None:
@@ -193,6 +198,32 @@ class SearchServiceTest(unittest.TestCase):
 
         self.assertEqual(len(response.results), 1)
         self.assertEqual(response.results[0].chunk_id, second_chunk)
+
+    def test_workspace_ids_are_forwarded_to_vector_client_fail_closed_by_default(self) -> None:
+        vector_client = FakeVectorClient([])
+        service = SearchService(
+            repository=FakeRepository({}),
+            vector_client=vector_client,
+            embedding_provider=DeterministicEmbeddingProvider(dimension=8),
+        )
+
+        service.search(SearchRequest(query="anything"), workspace_ids=["ws-a"])
+        self.assertEqual(vector_client.received_workspace_ids, ["ws-a"])
+
+        service.search(SearchRequest(query="anything"))
+        self.assertIsNone(vector_client.received_workspace_ids)
+
+    def test_search_always_requires_published_content(self) -> None:
+        vector_client = FakeVectorClient([])
+        service = SearchService(
+            repository=FakeRepository({}),
+            vector_client=vector_client,
+            embedding_provider=DeterministicEmbeddingProvider(dimension=8),
+        )
+
+        service.search(SearchRequest(query="anything"))
+
+        self.assertTrue(vector_client.received_require_published)
 
     def test_rerank_and_snippet_helpers_are_stable(self) -> None:
         score = rerank_score(

@@ -49,7 +49,7 @@ class AuditRepository:
             error_message=error_message,
         )
 
-    def upsert_document(self, document: ParsedDocument):
+    def upsert_document(self, document: ParsedDocument, workspace_id=None, uploaded_by=None):
         return (
             DocumentRecord(
                 id=self.document_id,
@@ -143,7 +143,7 @@ class FakeVectorClient:
     def upsert_chunks(self, points):
         return None
 
-    def search(self, vector, limit=10, tags=None, source_type=None):
+    def search(self, vector, limit=10, tags=None, source_type=None, workspace_ids=None, require_published=False):
         return [{"id": str(self.chunk_id), "score": 0.9, "payload": {"chunk_id": str(self.chunk_id)}}]
 
 

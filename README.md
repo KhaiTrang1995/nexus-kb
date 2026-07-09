@@ -2,7 +2,7 @@
 
 Enterprise RAG and Knowledge Graph Engine with governed AI workflows.
 
-Nexus-KB is an open-source reference architecture for building a secure Retrieval-Augmented Generation (RAG) and Knowledge Graph (KG) platform. It combines local and Obsidian ingestion, PostgreSQL metadata and audit storage, Qdrant vector search, MCP source connector boundaries, review workflows, graph construction, and an LLM Gateway slice.
+Nexus-KB is an open-source reference architecture for building a secure Retrieval-Augmented Generation (RAG) and Knowledge Graph (KG) platform. It combines local/Obsidian/file-upload ingestion (PDF, DOCX, XLSX, PPTX, CSV, HTML via `markitdown`), PostgreSQL metadata and audit storage, Qdrant vector search, workspace-scoped RBAC, an admin-triggered Confluence connector, a two-tier human review gate, a RAG chatbot on an internal LLM, a read-only MCP knowledge server, review workflows, graph construction with an interactive explorer, and an LLM Gateway slice.
 
 The repository is still a reference implementation, not a production-ready enterprise stack. All examples and tests use synthetic data.
 
@@ -30,6 +30,16 @@ Nexus-KB addresses fragmented enterprise knowledge by making documents searchabl
 - Expose a Confluence-oriented MCP connector scaffold.
 - Build relational Knowledge Graph entities and relationships from approved chunks.
 - Test an LLM Gateway slice with routing, caching, retry, telemetry, and provider abstraction.
+
+The knowledge-hub extension (see [docs/knowledge-hub/plan.md](docs/knowledge-hub/plan.md)) adds:
+
+- Upload PDF/DOCX/XLSX/PPTX/CSV/HTML through the web console into an async FIFO ingestion queue, with duplicate detection and versioning.
+- Workspace-scoped, fail-closed RBAC across search, upload, and chat (`is_admin` bypasses; empty membership means empty results, never "everything").
+- A second, per-document review gate: the uploader confirms they read a document before it becomes searchable, on top of the existing low-confidence chunk queue.
+- An admin-triggered Confluence connector that reuses the same upload/ingestion pipeline per page.
+- A RAG chatbot (`POST /api/v1/chat`) on a self-hosted, OpenAI-compatible LLM, with citations and a clear "LLM unavailable" degrade path that never blocks plain search.
+- A read-only MCP server (`mcp-servers/nexus-knowledge`) exposing `search_knowledge`/`ask_knowledge`/`list_documents` for AI agents via an MCP Gateway.
+- An interactive graph explorer: search entities by name, click a node to view its source document, expand neighbors, without re-running extraction just to look.
 
 ## Architecture
 
@@ -60,31 +70,44 @@ The source-of-truth architecture document is [docs/architecture.md](docs/archite
 - **MCP Source Connector:** `mcp-servers/confluence-bridge` provides source discovery and document read tools with user-context authorization, disabled mutating tools, structured errors, and redaction.
 - **Knowledge Graph Builder:** `workers/graph-builder` extracts entities and relationships from approved chunks, merges duplicates, stores confidence/provenance, and supports chunk-level graph lookup.
 - **LLM Gateway Slice:** `services/llm-gateway` centralizes routing, prompt categories, caching, retry, telemetry, and provider abstraction for future model use.
+- **Multi-Format Upload Queue:** `POST /api/v1/documents` accepts PDF/DOCX/XLSX/PPTX/CSV/HTML/MD/TXT, converts via `markitdown`, and processes through a Postgres-backed FIFO `ingestion_jobs` queue (`python -m nexus_document_parser.worker`) with automatic retry, manual retry, duplicate detection, and versioning.
+- **Workspace RBAC:** Fail-closed workspace scoping on search, upload, and chat; `services/nexus-api/nexus_api/routers/workspaces.py` provides admin CRUD for workspaces and membership.
+- **Two-Tier Review:** The pre-existing low-confidence chunk queue, plus a new per-document "uploader confirms they read it" gate (`POST /api/v1/documents/{id}/ack`) before content is searchable.
+- **Confluence Connector:** `POST /api/v1/confluence/sync` (admin-only) pulls a space's pages through the same upload/ingestion pipeline, with full cleanup on a failed run.
+- **RAG Chatbot:** `POST /api/v1/chat` answers from the indexed knowledge base with citations, backed by any OpenAI-compatible LLM endpoint; degrades to a clear error without breaking plain search.
+- **MCP Knowledge Server:** `mcp-servers/nexus-knowledge` exposes read-only `search_knowledge`/`ask_knowledge`/`list_documents` tools, token-verified and workspace-scoped, for AI agents connecting via an MCP Gateway.
+- **Graph Explorer:** Search entities by name, click a node to load its source chunk/document, expand neighbors, and view the current graph without re-running extraction.
 - **Repository Safety:** `.gitignore`, [AGENTS.md](AGENTS.md), and `.rules` keep secrets, logs, raw data, sessions, model files, vector snapshots, and local runtime state out of git.
 
 ## Project Layout
 
 ```text
 nexus-kb/
-|-- docs/                            # Architecture, roadmap, and phase plans
+|-- apps/
+|   `-- web-console/                 # React + Vite + Tailwind operational console
+|-- docs/
+|   |-- knowledge-hub/               # Enterprise Knowledge Hub brainstorm + plan
+|   `-- ...                          # Architecture, roadmap, and phase plans
 |-- infrastructure/
 |   |-- alembic/                     # Alembic migration environment
 |   |-- migrations/                  # SQL init scripts for local containers
 |   `-- alembic.ini
 |-- mcp-servers/
-|   `-- confluence-bridge/           # Phase 3 MCP source connector scaffold
+|   |-- confluence-bridge/           # Confluence MCP source connector + HTTP client
+|   `-- nexus-knowledge/             # Read-only MCP server (search/ask/list, workspace-scoped)
 |-- packages/
 |   |-- shared-contracts/            # Shared Pydantic schemas
 |   `-- vector-client/               # Qdrant client wrapper
 |-- qdrant-multi-node-cluster/       # 3-node HA Qdrant demo
 |-- services/
-|   |-- llm-gateway/                 # Phase 5 gateway slice
-|   `-- nexus-api/                   # FastAPI ingest/search/audit/review/graph API
+|   |-- llm-gateway/                 # LLM gateway slice
+|   `-- nexus-api/                   # FastAPI ingest/upload/search/chat/audit/review/graph/workspaces API
 |-- workers/
-|   |-- document-parser/             # Parsing, chunking, embedding, ingest
+|   |-- document-parser/             # Parsing, chunking, embedding, ingestion queue worker
 |   `-- graph-builder/               # Entity and relationship builder
 |-- tests/                           # Offline and live tests
-|-- docker-compose.yml               # Local Postgres + Qdrant
+|-- docker-compose.yml               # Local Postgres + Qdrant (dev)
+|-- docker-compose.prod.yml          # Full stack: postgres, qdrant, api, worker, web
 |-- requirements.txt
 |-- pytest.ini
 `-- AGENTS.md
@@ -108,6 +131,14 @@ Create `.env` from [.env.example](.env.example) when running local services.
 | `QDRANT_COLLECTION` | `nexus_chunks` | Vector collection |
 | `NEXUS_EMBEDDING_MODEL` | `BAAI/bge-m3` | Runtime embedding model |
 | `NEXUS_EMBEDDING_DIMENSION` | `1024` | Embedding dimension |
+| `UPLOAD_STAGING_DIR` | `./data/uploads` | Staging dir for uploaded files before the worker processes them |
+| `UPLOAD_MAX_FILES_PER_BATCH` | `5` | Max files per upload request |
+| `UPLOAD_MAX_FILE_SIZE_MB` | `50` | Max size per uploaded file |
+| `INGESTION_JOB_MAX_ATTEMPTS` | `3` | Auto-retries before a job is marked failed |
+| `INGESTION_WORKER_POLL_SECONDS` | `2.0` | Worker poll interval when the queue is empty |
+| `CONFLUENCE_BASE_URL` | *(empty)* | Confluence base URL; connector stays disabled until set |
+| `CONFLUENCE_API_TOKEN` | *(empty)* | Confluence Bearer token |
+| `CONFLUENCE_SYNC_PAGE_LIMIT` | `100` | Max pages fetched per sync run (no pagination beyond this yet) |
 | `NEXUS_KB_RUN_LIVE_TESTS` | `0` | Enables live Docker-backed tests |
 
 ## Quick Start
@@ -152,14 +183,14 @@ alembic -c infrastructure/alembic.ini upgrade head
 PowerShell:
 
 ```powershell
-$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api"
+$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api;mcp-servers/confluence-bridge"
 uvicorn nexus_api.main:app --reload
 ```
 
 Linux/macOS:
 
 ```bash
-export PYTHONPATH="packages/shared-contracts:packages/vector-client:workers/document-parser:workers/graph-builder:services/nexus-api"
+export PYTHONPATH="packages/shared-contracts:packages/vector-client:workers/document-parser:workers/graph-builder:services/nexus-api:mcp-servers/confluence-bridge"
 uvicorn nexus_api.main:app --reload
 ```
 
@@ -167,9 +198,20 @@ Open `http://127.0.0.1:8000/docs`.
 
 ### 5. Ingest documents
 
+Directory/CLI scan (Phase 1, admin-run, no workspace/queue/ack):
+
 ```powershell
-$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api"
+$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api;mcp-servers/confluence-bridge"
 python -m nexus_document_parser.cli path\to\vault --source-type obsidian
+```
+
+File upload queue (Phase 7, `POST /api/v1/documents` -> `ingestion_jobs` -> worker -> ack):
+run the worker alongside the API so uploaded/synced files actually get processed --
+without it, jobs stay `queued` forever.
+
+```powershell
+$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api;mcp-servers/confluence-bridge"
+python -m nexus_document_parser.worker
 ```
 
 ### 6. Search
@@ -191,12 +233,29 @@ curl "http://127.0.0.1:8000/api/v1/review/queue" \
 curl -X POST "http://127.0.0.1:8000/api/v1/graph/build?limit=100"
 ```
 
-### 8. MCP connector runner
+### 8. MCP connector runner (Confluence, read-only source connector)
 
 ```powershell
 $env:PYTHONPATH="mcp-servers/confluence-bridge"
 '{"tool":"confluence.discover_sources","arguments":{"actor":{"user_id":"alice","roles":["SourceReader"],"allowed_spaces":["KB"],"correlation_id":"demo"},"space_key":"KB"}}' | python -m nexus_confluence_bridge
 ```
+
+### 9. MCP knowledge server (search/ask over the indexed knowledge base)
+
+Exposes `search_knowledge`, `ask_knowledge`, `list_documents` as read-only tools for an AI
+agent connecting through an MCP Gateway. Needs the full search/RAG stack on `PYTHONPATH`
+(same set as running the API) plus its own package, and a token minted the same way the web
+console gets one (`POST /api/v1/auth/dev-token`, or the real login flow once SSO lands).
+
+```powershell
+$env:PYTHONPATH="packages/shared-contracts;packages/vector-client;workers/document-parser;workers/graph-builder;services/nexus-api;services/llm-gateway;mcp-servers/confluence-bridge;mcp-servers/nexus-knowledge"
+'{"tool":"search_knowledge","token":"<jwt>","arguments":{"query":"onboarding checklist","limit":5}}' | python -m nexus_knowledge_mcp
+```
+
+Token verification is currently against the same internal JWT the web console uses
+(`InternalJwtVerifier`, `JWT_SECRET` env var) -- swapping in real Keycloak JWKS verification
+(per the MCP Gateway design) is a drop-in replacement of that one class; see
+`docs/phase-checklist.md` Phase 7 E9 for details.
 
 ## Verification
 
@@ -223,11 +282,12 @@ python -m pytest tests/test_live_integration_scaffold.py tests/test_live_graph_r
 - **Phase 4:** Knowledge Graph builder with entity extraction, duplicate merge, relationship confidence/provenance, relational graph tables, graph APIs, and search result graph context. (Local MVP complete; tests + live graph repository pass)
 - **Phase 5:** LLM Gateway slice with routing, prompt category tracking, caching, retry, telemetry, and provider abstraction. (Slice complete + tests)
 - **Phase 6:** LLM Extraction Engine with entity/relationship extraction, domain template registry, hyperedge builder, SQLAlchemy persistence, and migration 004. (Implementation complete; Ollama + OpenAI providers wired)
-- **Phase 7:** Web Console (React + Vite + Tailwind) with SearchView graph panels, AuditView table + filters, GraphView builder, IngestionView form, and KnowledgeGraph stats page. (UI complete; all 4 core features functional; 169 tests passing)
+- **Phase 7:** Web Console (React + Vite + Tailwind) with SearchView graph panels, AuditView table + filters, GraphView builder, IngestionView form, and KnowledgeGraph stats page. (UI complete; all 4 core features functional)
+- **Phase 8 — Enterprise Knowledge Hub:** Multi-format upload queue, workspace RBAC, two-tier review/ack, Confluence connector, RAG chatbot, MCP knowledge server, and an interactive graph explorer. (Backend + upload UI complete and tested; admin UI, chat UI, version-history UI, and SSO Keycloak remain -- see [docs/phase-checklist.md](docs/phase-checklist.md) Phase 7 section and [docs/knowledge-hub/plan.md](docs/knowledge-hub/plan.md) for the full gap analysis and what's left)
 
 See `docs/frontend-plan.md` for the web-console architecture plan, design rationale, and Mermaid diagrams. Web console provides a unified operational interface for ingestion, search, review, audit, and graph management.
 
-Future work remains for production authentication, real enterprise connector adapters, deployment hardening, and observability. All examples and tests use synthetic data only.
+Future work remains for production authentication (SSO/Keycloak), admin UI for workspace/quota/Confluence-sync management, chat UI, real enterprise connector adapters beyond Confluence, deployment hardening, and observability. All examples and tests use synthetic data only.
 
 ## Contributing and Security
 

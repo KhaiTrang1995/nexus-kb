@@ -6,7 +6,7 @@
 # 3. Database migrations execution (Alembic)
 # 4. Live service integration testing (Pytest with PostgreSQL and Qdrant)
 
-name: 🚀 Nexus-KB CI Pipeline
+name: Nexus-KB CI Pipeline
 
 on:
   push:
@@ -16,10 +16,10 @@ on:
 
 jobs:
   # ────────────────────────────────────────────────────────────────
-  #  🧹 Lint & Format Check
+  #  Lint & Format Check
   # ────────────────────────────────────────────────────────────────
   lint:
-    name: "🧹 Lint & Format"
+    name: "Lint & Format"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -43,10 +43,10 @@ jobs:
           ruff format --check . || true
 
   # ────────────────────────────────────────────────────────────────
-  #  🐳 Validate Docker Configurations
+  #  Validate Docker Configurations
   # ────────────────────────────────────────────────────────────────
   docker-validate:
-    name: "🐳 Validate Docker Compose"
+    name: "Validate Docker Compose"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -62,10 +62,10 @@ jobs:
           docker compose -f qdrant-multi-node-cluster/deployments/docker/docker-compose-multi-node.yml config
 
   # ────────────────────────────────────────────────────────────────
-  #  🧪 Pytest Integration Suite
+  #  Pytest Integration Suite
   # ────────────────────────────────────────────────────────────────
   test:
-    name: "🧪 Test (Python ${{ matrix.python-version }})"
+    name: "Test (Python ${{ matrix.python-version }})"
     runs-on: ubuntu-latest
     needs: [lint, docker-validate]
     strategy:
